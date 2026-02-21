@@ -1,0 +1,140 @@
+use std::any::type_name_of_val;
+
+use bevy::{log::tracing, prelude::*};
+
+use crate::{basics::spawn::{SpawnEntityMsg, spawn_schedule}, shared_unit::{CanBeCapturedUnitStat, CaptureState}, stat_component::stat::Stat, team_data::team_color::TeamsColor, unit_ui::{entity_top_bar::{self, EntityTopBarData, SpawnEntityTopBar}, entity_top_bars_panel_ui::SystemSetSpawnEntityTopBarsUi}};
+
+
+
+
+#[derive(Component,Reflect,Clone, Copy)]
+pub struct SharedUnitBarData{
+    pub time:f32,
+    pub max_time:f32,
+    pub color:Color
+}
+
+impl Default for SharedUnitBarData {
+    fn default() -> Self {
+        Self { time: 0.0, max_time: 0.0, color: Color::srgb(0.5, 0.5, 0.5) }
+    }
+}
+
+impl SharedUnitBarData {
+    pub fn new_c(def_stat:&CanBeCapturedUnitStat,cap_stat:&Stat<CaptureState>, teams_color:&Res<TeamsColor>)->Self{
+        
+        let color=if let Some(team_id)=cap_stat.team{
+            *teams_color.0.get(team_id).unwrap_or(&Color::srgb(0.5, 0.5, 0.5))
+        }else{
+            Color::srgb(0.5, 0.5, 0.5)
+        };
+
+        SharedUnitBarData { time: cap_stat.capture_time, max_time: def_stat.max_capture_time, color: color }
+    }
+}
+
+impl EntityTopBarData for SharedUnitBarData {
+    fn bar_color(&self)->Color {
+        self.color
+    }
+
+    fn bar_background_color(&self)->Color {
+        Color::BLACK
+    }
+
+    fn info_text(&self)->String {
+        String::from("team")
+    }
+
+    fn info_text_color(&self)->Color {
+        Color::srgb(0.5, 0.5, 0.5)
+    }
+
+    fn bar_text(&self)->String {
+        format!("{:.1}/{:.1}",self.time,self.max_time)
+    }
+
+    fn bar_text_color(&self)->Color {
+        Color::srgb(0.0, 0.0, 0.0)
+    }
+
+    fn bar_percent(&self)->f32 {
+        if self.max_time==0.0 {
+            0.0
+        }else {
+            self.time/self.max_time
+        }
+    }
+}
+
+pub fn update_shared_unit_bar_data(mut node_query:Query<(&mut SharedUnitBarData,&CanBeCapturedUnitStat,&Stat<CaptureState>)>,teams_color:Res<TeamsColor>){
+    node_query.par_iter_mut().for_each(|(mut data,def_stat,cap_stat)|{
+        *data=SharedUnitBarData::new_c(def_stat, cap_stat,&teams_color);
+    });
+}
+
+
+pub fn spawn_shared_unit_bar_data<TMsg>(mut mr:MessageReader<TMsg>,query:Query<(Option<(&CanBeCapturedUnitStat,&Stat<CaptureState>)>,)>,p_cmd:ParallelCommands, teams_color:Res<TeamsColor>)
+    where TMsg:Message+SpawnEntityMsg+SpawnEntityTopBar<SharedUnitBarData>
+{
+    mr.par_read().for_each(|m|{
+        let Ok((datas,))=query.get(m.entity()) else {
+            tracing::error!("entity {} not found in {}",m.entity(),type_name_of_val(&query));
+            return;
+        };
+        let hp_data= match datas {
+            Some((def_stat,cap_stat)) => SharedUnitBarData::new_c(def_stat,cap_stat,&teams_color),
+            None => default(),
+        };
+        p_cmd.command_scope(move |mut cmd|{
+            cmd.entity(m.entity()).entry::<SharedUnitBarData>().and_modify(move |mut a|{*a=hp_data;}).or_insert(hp_data);
+        });
+
+    });
+}
+
+#[derive(Message)]
+pub struct SpawnSharedUnitBarDataA{
+    entity:Entity
+}
+
+impl SpawnEntityMsg for SpawnSharedUnitBarDataA {
+    fn entity(&self)->Entity {
+        self.entity
+    }
+}
+
+impl SpawnEntityTopBar<SharedUnitBarData> for SpawnSharedUnitBarDataA {
+    
+}
+
+pub fn plugin(app:&mut App){
+    
+    if !app.get_added_plugins::<crate::visual::VisualPluginMark>().is_empty(){
+        // app.add_systems(spawn_schedule(), spawn_health_bar::<SpawnHealthBarA>.after(spawn_entity_top_bar_ui::<SpawnEntityTopBarsUIMsgA>));
+        
+
+        app.add_message::<SpawnSharedUnitBarDataA>();
+        
+
+        app.add_plugins(plugin_for_t::<SpawnSharedUnitBarDataA,_>( SystemSetSpawnEntityTopBarsUi));
+
+        app.add_plugins(entity_top_bar::plugin_for_t::<SharedUnitBarData>());
+
+        app.add_systems(Update, update_shared_unit_bar_data);
+    }
+}
+
+pub fn plugin_for_t<TMsg,M1>(sys_spawn_top_bars:impl IntoSystemSet<M1>+Copy+Send+Sync+'static)->impl bevy::prelude::Plugin
+    where TMsg:Message+SpawnEntityMsg + SpawnEntityTopBar<SharedUnitBarData>,
+{
+    return move|app:&mut App|{
+        if !app.get_added_plugins::<crate::visual::VisualPluginMark>().is_empty(){
+            // app.add_systems(spawn_schedule(), spawn_health_bar::<TMsg>.after(spawn_entity_top_bar_ui::<TSpawnUIMsg>));
+            let sys_spawn_t=spawn_shared_unit_bar_data::<TMsg>;
+            app.add_systems(spawn_schedule(), sys_spawn_t);
+            app.add_plugins(entity_top_bar::plugin_for_t_spawn::<SharedUnitBarData,TMsg,_,_>(sys_spawn_top_bars, sys_spawn_t ));
+            
+        }
+    };
+}
