@@ -68,6 +68,23 @@ impl<'a,T> OneOneMappingTypeFunc<&'a T> for MapFromStatRef {
 	type Input=&'a Stat<T>;
 }
 
+pub struct MapFromStatMut;
+
+impl<'a,T> Func<&'a mut Stat<T>> for MapFromStatMut {
+	type Output=&'a mut T;
+
+	fn call(i: &'a mut Stat<T>) -> Self::Output {
+		&mut i.0
+	}
+}
+
+impl<'a,T> TypeFunc<&'a mut Stat<T>> for MapFromStatMut {
+	type Output=&'a mut T;
+}
+impl<'a,T> OneOneMappingTypeFunc<&'a mut T> for MapFromStatMut {
+	type Input=&'a mut Stat<T>;
+}
+
 #[derive(Clone, Copy,Debug)]
 pub struct SelectChangeRef<'a>(pub PhantomData<&'a ()>);
 impl<'a> Default for SelectChangeRef<'a>{
