@@ -8,8 +8,8 @@ use crate::stat_component::{change::Change, determining::Determining, stat::Stat
 
 pub fn stat_apply_change<TStat,TChange,S,C>(mut stat:S,mut change:C)
 	where 
-		TStat:Default+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
-        TChange:Default+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
+		TStat:Default+AddAssign<TChange>,
+        TChange:Default+AddAssign<TChange>,
 		S:Deref<Target = Stat<TStat>>+DerefMut,
 		C:Deref<Target = Change<TChange>>+DerefMut
 {
