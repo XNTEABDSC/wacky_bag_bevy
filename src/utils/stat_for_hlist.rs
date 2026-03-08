@@ -4,7 +4,7 @@ use frunk::Func;
 use wacky_bag::utils::type_fn::{OneOneMappingFunc, OneOneMappingTypeFunc, ReverseFunc, TypeFunc};
 // use wacky_bag::utils::output_func::OneOneMappingFunc;
 
-use crate::stat_component::{change::Change, determining_apply_changes::stat_apply_change, stat::Stat};
+use crate::stat_component::{change::Change, determining::Determining, determining_apply_changes::stat_apply_change, stat::Stat};
 
 
 pub struct MapToStat;
@@ -46,6 +46,25 @@ impl<T> TypeFunc<T> for MapToChange {
 }
 impl<T> OneOneMappingTypeFunc<Change<T>> for MapToChange {
 	type Input=T;
+}
+
+pub struct MapToDetermining;
+
+impl<T> TypeFunc<T> for MapToDetermining {
+	type Output=Determining<T>;
+}
+
+impl<T> OneOneMappingTypeFunc<Determining<T>> for MapToDetermining {
+	type Input=T;
+}
+
+impl<T> Func<T> for MapToDetermining 
+{
+	type Output=Determining<T>;
+
+	fn call(_i: T) -> Self::Output {
+		Determining::default()
+	}
 }
 
 pub type MapFromStat=ReverseFunc<MapToStat>;

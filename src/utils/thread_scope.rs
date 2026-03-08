@@ -1,8 +1,7 @@
-use std::mem::transmute;
 
 use bevy::tasks::{ComputeTaskPool, Scope};
 use wacky_bag::traits::scope_no_ret::{
-    ThreadScope, ThreadScopeCreator, ThreadScopeCreatorStd, ThreadScopeUser,
+    ThreadScope, ThreadScopeCreator, ThreadScopeUser,
 };
 
 pub struct ComputeTaskPoolScope< 'scope, 'env: 'scope>(pub &'scope Scope<'scope, 'env, ()>);
