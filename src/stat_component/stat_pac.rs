@@ -4,9 +4,9 @@ use bevy::reflect::Reflect;
 
 use crate::stat_component::{change::Change, stat::Stat};
 #[derive(Default,Reflect)]
-pub struct StatPac<T>(Stat<T>,Change<T>);
+pub struct StatPack<T>(Stat<T>,Change<T>);
 
-impl<T> StatPac<T> 
+impl<T> StatPack<T> 
     where T:AddAssign+Default
 {
     pub fn new(v:T)->Self{Self(Stat(v),Change::default())}
