@@ -1,14 +1,16 @@
 use bevy::{app::{App, Update}, ecs::system::{Query, Res}, math::Vec3, time::{Fixed, Time}, transform::components::Transform};
-use wacky_bag_fixed::vec_fix::VecFix;
+use nalgebra::{RealField, SVector};
+use physics_basic::stats::{Pos, Vel};
 
-use crate::{physics::{position::Position, velocity::Velocity}, stat_component::stat::Stat};
+
+use crate::{physics::{}, stat_component::stat::Stat};
 
 
-fn vec_fix_to_vec_f32(a:VecFix<3>)->Vec3 {
-	Vec3 { x: a[0].to_num(), y: a[1].to_num(), z: a[2].to_num() }
+fn vec_fix_to_vec_f32<Num:RealField>(a:SVector<Num,3>)->Vec3 {
+	Vec3 { x:a[0].to_subset().unwrap() , y: a[1].to_subset().unwrap(), z: a[2].to_subset().unwrap() }
 }
 
-pub fn position_to_transform(mut query:Query<(&Stat<Position<3>>,Option<&Stat<Velocity<3>>>,&mut Transform)>,time:Res<Time<Fixed>>) {
+pub fn position_to_transform<Num:RealField+Copy>(mut query:Query<(&Stat<Pos<Num,3>>,Option<&Stat<Vel<Num,3>>>,&mut Transform)>,time:Res<Time<Fixed>>) {
     query.par_iter_mut().for_each(|(p,v_may,mut t)|{
         if let Some(v)=v_may{
             let a = time.overstep_fraction()*time.delta_secs();
@@ -25,6 +27,6 @@ pub fn position_to_transform(mut query:Query<(&Stat<Position<3>>,Option<&Stat<Ve
 }
 
 
-pub fn plugin(app:&mut App) {
-	app.add_systems(Update, position_to_transform);
+pub fn plugin<Num:RealField+Copy>(app:&mut App) {
+	app.add_systems(Update, position_to_transform::<Num>);
 }

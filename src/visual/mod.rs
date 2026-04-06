@@ -1,6 +1,9 @@
 pub mod position_to_transform;
 
+use std::marker::PhantomData;
+
 use bevy::{app::{PluginGroup, PluginGroupBuilder}, asset::{AssetPath, AssetServer}, ecs::{bundle::Bundle, system::Res}, math::Vec3, sprite::Sprite, transform::components::Transform};
+use nalgebra::RealField;
 
 
 pub struct SpawnEntityVisualData<'a>{
@@ -20,12 +23,14 @@ impl<'a> SpawnEntityVisualData<'a> {
 	}
 }
 
-pub struct VisualPluginGroup{}
+pub struct VisualPluginGroup<Num>{
+	pub p:PhantomData<Num>
+}
 
-impl PluginGroup for VisualPluginGroup {
+impl<Num:RealField+Copy> PluginGroup for VisualPluginGroup<Num> {
     fn build(self) -> bevy::app::PluginGroupBuilder {
         PluginGroupBuilder::start::<Self>()
         //.add(VisualPluginMark)
-        .add(position_to_transform::plugin)
+        .add(position_to_transform::plugin::<Num>)
     }
 }

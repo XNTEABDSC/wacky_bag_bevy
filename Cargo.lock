@@ -2389,7 +2389,6 @@ dependencies = [
  "az",
  "bytemuck",
  "half",
- "num-traits",
  "typenum",
 ]
 
@@ -4040,9 +4039,13 @@ dependencies = [
  "cordic",
  "derive_more",
  "fixed",
+ "frunk",
+ "nalgebra",
+ "num-traits",
  "rand 0.8.5",
+ "simba",
+ "typenum",
  "wacky_bag",
- "wacky_bag_fixed",
 ]
 
 [[package]]
@@ -4761,13 +4764,16 @@ name = "statistic_physics"
 version = "0.1.0"
 dependencies = [
  "cordic",
+ "derive_more",
  "fixed",
  "frunk",
  "lazy_static",
+ "nalgebra",
+ "num-traits",
  "physics_basic",
  "rand 0.8.5",
+ "simba",
  "wacky_bag",
- "wacky_bag_fixed",
 ]
 
 [[package]]
@@ -5172,6 +5178,8 @@ name = "wacky_bag"
 version = "0.1.0"
 dependencies = [
  "frunk",
+ "num-traits",
+ "simba",
  "wacky_bag_macro",
 ]
 
@@ -5182,21 +5190,11 @@ dependencies = [
  "bevy",
  "derive_more",
  "frunk",
+ "nalgebra",
+ "num-traits",
  "physics_basic",
  "rand 0.9.2",
  "statistic_physics",
- "wacky_bag",
- "wacky_bag_fixed",
-]
-
-[[package]]
-name = "wacky_bag_fixed"
-version = "0.1.0"
-dependencies = [
- "cordic",
- "fixed",
- "nalgebra",
- "rand 0.8.5",
  "wacky_bag",
 ]
 
