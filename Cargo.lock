@@ -4036,6 +4036,7 @@ dependencies = [
 name = "physics_basic"
 version = "0.1.0"
 dependencies = [
+ "approx",
  "cordic",
  "derive_more",
  "fixed",

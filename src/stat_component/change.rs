@@ -45,3 +45,11 @@ pub fn transfer_changes<T,TSrc,TTar>(delta:T,src:&Change<TSrc>,tar:&Change<TTar>
 	tar.add_change(delta.clone());
 	src.add_change(-delta);
 }
+
+impl<T> Clone for Change<T> 
+where T:Clone
+{
+	fn clone(&self) -> Self {
+		Self(self.0.lock().unwrap().clone().into())
+	}
+}

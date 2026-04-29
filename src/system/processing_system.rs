@@ -10,11 +10,11 @@ use crate::system::multi_sets::{FoldScheduleConfigsAfterSets, FoldScheduleConfig
 
 /// [ProcessingSystemSet]<T> represents what a system requires(reads) and generates(writes). T is a [bevy::ecs::component::Component].
 /// 
-/// A system before [ProcessingSystemSet]<T> means it generates or writes T (normally initalizing). It is expected to have only one system to generate T.
+/// A system before [ProcessingSystemSet]<T> means it generates or writes T (normally initalizing). It is expected to have only one system generating T.
 /// 
 /// A system after [ProcessingSystemSet]<T> means it needs or reads T.
 /// 
-/// A system inside [ProcessingSystemSet]<T> means it modifies T. They may working together.
+/// A system inside [ProcessingSystemSet]<T> means it modifies T. They may work parallelly.
 /// 
 /// see [ScheduleConfigsProcessing::config_processing] for simple usage.
 #[derive(SystemSet)]
@@ -80,9 +80,11 @@ pub trait ScheduleConfigsProcessing<T>
 {
 	/// Config systems with [ProcessingSystemSet].
 	/// 
-	/// The systems needs InputComponents, modifies ProcessingComponents, and generates OutputComponents.
+	/// The systems requires `InputComponents`, modifies `ProcessingComponents`, and generates `OutputComponents`.
 	/// 
 	/// All type params are [frunk::hlist].
+	/// 
+	/// `InputComponents` `ProcessingComponents` `OutputComponents` can actually be any type marker, which is suggested to be [Component][bevy::prelude::Component] or [Resource][bevy::prelude::Resource] 
 	fn config_processing<InputComponents,ProcessingComponents,OutputComponents>(self)->ScheduleConfigs<T>
 		where 
 			InputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
