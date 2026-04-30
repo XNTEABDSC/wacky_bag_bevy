@@ -1,6 +1,7 @@
 use std::{marker::PhantomData, ops::{AddAssign, Neg}};
 
 use frunk::Func;
+use num_traits::Zero;
 use wacky_bag::utils::type_fn::{OneOneMappingFunc, OneOneMappingTypeFunc, ReverseFunc, TypeFunc};
 // use wacky_bag::utils::output_func::OneOneMappingFunc;
 
@@ -142,7 +143,7 @@ impl<'a,T> Func<(T,&'a Change<T>)> for HAddChange
 }
 pub struct HApplyChange;
 impl<'a,T> Func<(&'a mut Change<T>,&'a mut Stat<T>)> for HApplyChange 
-	where T:std::ops::AddAssign+Default
+	where T:std::ops::AddAssign+Zero
 {
 	type Output=();
 
@@ -154,7 +155,7 @@ impl<'a,T> Func<(&'a mut Change<T>,&'a mut Stat<T>)> for HApplyChange
 
 pub struct HChangeGetAndReset;
 impl<'a,T> Func<&'a mut Change<T>> for HChangeGetAndReset 
-	where T:std::ops::AddAssign+Default
+	where T:std::ops::AddAssign+Zero
 {
 	type Output=T;
 
@@ -164,7 +165,7 @@ impl<'a,T> Func<&'a mut Change<T>> for HChangeGetAndReset
 }
 pub struct HChangeAdd;
 impl<'a,T> Func<(T,&'a Change<T>)> for HChangeAdd 
-	where T:std::ops::AddAssign+Default
+	where T:std::ops::AddAssign+Zero
 {
 	type Output=();
 
@@ -189,7 +190,7 @@ impl<'a,T,TSrc,TTar> Func<(T,(&'a Change<TSrc>,&'a Change<TTar>))> for HChangeTr
 }
 pub struct HChangeApplyChange;
 impl<'a,T> Func<(&'a mut Change<T>,&'a Change<T>)> for HChangeApplyChange 
-	where T:std::ops::AddAssign+Default
+	where T:std::ops::AddAssign+Zero
 {
 	type Output=();
 
@@ -211,7 +212,7 @@ impl<'a,T> Func<&'a Stat<T>> for MapTakeStatChange
 }
 
 impl<'a,T> Func<&'a Change<T>> for MapTakeStatChange
-	where T:Default
+	where T:Zero
 {
 	type Output=Change<T>;
 

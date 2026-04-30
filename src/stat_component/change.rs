@@ -3,9 +3,23 @@
 use std::{mem, ops::{AddAssign, Neg}, sync::Mutex};
 
 use bevy::prelude::Component;
+use num_traits::Zero;
 
-#[derive(Component,Debug,Default)]
+#[derive(Component,Debug)]
 pub struct Change<T>(pub Mutex<T>);
+
+impl<T:Zero> Default for Change<T> {
+	fn default() -> Self {
+		Self(Mutex::new(T::zero()))
+	}
+	// fn zero() -> Self {
+	// 	Self(Mutex::new(T::zero()))
+	// }
+
+	// fn is_zero(&self) -> bool {
+	// 	T::is_zero(&self.0.lock().unwrap())
+	// }
+}
 
 impl<T> Change<T>
 {
@@ -30,10 +44,10 @@ impl<T> Change<T>
     //     *a.deref_mut().deref_mut()+=change;
     // }
     pub fn get_and_reset(&mut self)->T
-        where T:Default
+        where T:Zero
     {
         let mut b=self.0.lock().unwrap();
-        mem::replace(&mut b,Default::default())
+        mem::replace(&mut b,Zero::zero())
     }
 }
 

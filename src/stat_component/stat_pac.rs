@@ -3,11 +3,17 @@ use std::ops::AddAssign;
 use bevy::reflect::Reflect;
 
 use crate::stat_component::{change::Change, stat::Stat};
-#[derive(Default,Reflect)]
+#[derive(Reflect)]
 pub struct StatPack<T>(Stat<T>,Change<T>);
 
+impl<T: num_traits::Zero> Default for StatPack<T> {
+    fn default() -> Self {
+		Self(Default::default(), Default::default())
+	}
+}
+
 impl<T> StatPack<T> 
-    where T:AddAssign+Default
+    where T:AddAssign+num_traits::Zero
 {
     pub fn new(v:T)->Self{Self(Stat(v),Change::default())}
     pub fn get(&self)->&T{&self.0}
