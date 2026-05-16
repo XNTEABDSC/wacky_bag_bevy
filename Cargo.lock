@@ -3469,6 +3469,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "name_type_for_fn"
+version = "0.1.0"
+dependencies = [
+ "name_type_for_fn_proc_macro",
+ "single_fn_static",
+]
+
+[[package]]
+name = "name_type_for_fn_proc_macro"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "single_fn_static",
+ "syn",
+]
+
+[[package]]
 name = "ndk"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4042,6 +4060,7 @@ dependencies = [
  "fixed",
  "frunk",
  "nalgebra",
+ "name_type_for_fn",
  "num-traits",
  "rand 0.8.5",
  "simba",
@@ -4649,6 +4668,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
 
 [[package]]
+name = "single_fn_static"
+version = "0.1.0"
+
+[[package]]
 name = "skrifa"
 version = "0.37.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4772,6 +4795,7 @@ dependencies = [
  "frunk",
  "lazy_static",
  "nalgebra",
+ "name_type_for_fn",
  "num-traits",
  "physics_basic",
  "rand 0.8.5",
@@ -5180,6 +5204,8 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 name = "wacky_bag"
 version = "0.1.0"
 dependencies = [
+ "approx",
+ "either",
  "frunk",
  "num-traits",
  "simba",

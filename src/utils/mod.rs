@@ -5,5 +5,7 @@ pub mod system_set_for_t;
 pub mod query_get_or_err_return;
 pub mod thread_scope;
 pub mod stat_for_hlist;
-pub mod h_list_query_data;
+pub mod h_list_query_data_old;
 pub mod plugin_add_systems;
+pub mod h_list_query;
+pub mod fold_plugin_group_add;

@@ -1,18 +1,19 @@
 
 
-use std::{marker::PhantomData, ops::{AddAssign, Deref, DerefMut}};
+use std::{marker::{PhantomData, Send, Sync}, ops::{AddAssign, Deref, DerefMut}};
 
 use bevy::{app::{App, FixedPostUpdate}, ecs::{query::With, schedule::{Chain, GraphInfo, IntoScheduleConfigs, Schedulable, ScheduleConfigs}, system::{Query, ScheduleSystem}}, utils::default};
 use frunk::{Func, HList, HNil, Poly, hlist::{HFoldLeftable, HMappable, HZippable}};
 use num_traits::Zero;
-use wacky_bag::utils::h_list_helpers::{HMapP, HZip, MapToPhantom};
+use physics_basic::stat_to_change_type::StatToChangeType;
+use wacky_bag::utils::{h_list_helpers::{HMapP, HZip, MapToPhantom}, type_fn::TypeFunc};
 
 use crate::{stat_component::{change::Change, determining::Determining, stat::Stat}, system::processing_system::ScheduleConfigsProcessing, utils::stat_for_hlist::{MapToChange, MapToStat}};
 
 pub fn stat_apply_change<TStat,TChange,S,C>(mut change:C,mut stat:S)
 	where 
-		TStat:Zero+AddAssign<TChange>,
-        TChange:Zero+AddAssign<TChange>,
+		TStat:AddAssign<TChange>,
+        TChange:Zero,
 		S:Deref<Target = Stat<TStat>>+DerefMut,
 		C:Deref<Target = Change<TChange>>+DerefMut
 {
@@ -31,7 +32,7 @@ pub fn change_apply_change<TChange,CM,CR>(mut source:CM,target:CR)
 /// for each [`Stat<T>`] and [`Change<T>`] with [`Determining<T>`], apply changes and reset [`Change<T>`].
 pub fn determining_apply_changes<T>(mut query:Query<(&mut Stat<T>,&mut Change<T>),With<Determining<T>>>)
     where 
-        T:Zero+AddAssign + std::marker::Send + std::marker::Sync+'static
+        T:Zero+AddAssign + Send + Sync+'static
 {
     (&mut query).par_iter_mut().for_each(|(stat,change)|{
         stat_apply_change(change,stat);
@@ -40,19 +41,68 @@ pub fn determining_apply_changes<T>(mut query:Query<(&mut Stat<T>,&mut Change<T>
 
 pub fn determining_apply_changes_plugin<T>(app:&mut App)
     where 
-        T:Zero+AddAssign + std::marker::Send + std::marker::Sync+'static
+        T:Zero+AddAssign + Send + Sync+'static
 {
 	app.add_systems(FixedPostUpdate, determining_apply_changes::<T>.into_configs()
 		.config_processing::<HNil,HNil,HList!(Stat<T>,Change<T>)>()
 	);
+}
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MapToDeterminingApplyChangesPlugin;
+
+impl<T> Func<PhantomData<T>> for MapToDeterminingApplyChangesPlugin
+    where 
+        T:Zero+AddAssign + Send + Sync+'static
+{
+	type Output=fn(&mut App);
+
+	fn call(_i: PhantomData<T>) -> Self::Output {
+		determining_apply_changes_plugin::<T>
+	}
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+pub struct MapToDeterminingApplyChanges2Plugin;
+
+impl<T,M,C> Func<(PhantomData<T>,PhantomData<M>)> for MapToDeterminingApplyChanges2Plugin
+    where 
+        T:AddAssign<C> + Send + Sync+'static,
+		T:StatToChangeType<M,ChangeType=C>,
+		C:Zero + Send + Sync+'static,
+{
+	type Output=fn(&mut App);
+
+	fn call(_i: (PhantomData<T>,PhantomData<M>)) -> Self::Output {
+		determining_apply_changes_2_plugin::<T,C>
+	}
+}
+
+impl<T,M,C> Func<PhantomData<(T,M)>> for MapToDeterminingApplyChanges2Plugin
+    where 
+        T:AddAssign<C> + Send + Sync+'static,
+		T:StatToChangeType<M,ChangeType=C>,
+		C:Zero + Send + Sync+'static,
+{
+	type Output=fn(&mut App);
+
+	fn call(_i: PhantomData<(T,M)>) -> Self::Output {
+		determining_apply_changes_2_plugin::<T,C>
+	}
+}
+
+impl<T> TypeFunc<PhantomData<T>> for MapToDeterminingApplyChangesPlugin
+    where 
+        T:Zero+AddAssign + Send + Sync+'static
+{
+	type Output=fn(&mut App);
 }
 
 /// for each [`Stat<TStat>`] and [`Change<TChange>`] with [`Determining<TStat>`], apply changes and reset [`Change<TChange>`].
 pub fn determining_apply_changes_2<TStat,TChange>(mut query:Query<(&mut Stat<TStat>,&mut Change<TChange>),With<Determining<TStat>>>)
     where 
         //T:Deref<Target : AddAssign+Sized>+DerefMut+Into<T::Target>+ Send+ Sync+'static+Default
-        TStat:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
-        TChange:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
+        TStat:AddAssign<TChange> + Send + Sync+'static,
+        TChange:Zero + Send + Sync+'static,
 {
     (&mut query).par_iter_mut().for_each(|(stat,change)|{
         // **value += delta.get_and_reset();
@@ -61,8 +111,8 @@ pub fn determining_apply_changes_2<TStat,TChange>(mut query:Query<(&mut Stat<TSt
 }
 pub fn determining_apply_changes_2_plugin<TStat,TChange>(app:&mut App)
     where 
-        TStat:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
-        TChange:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
+        TStat:AddAssign<TChange> + Send + Sync+'static,
+        TChange:Zero + Send + Sync+'static,
 {
 	app.add_systems(FixedPostUpdate, 
 		determining_apply_changes_2::<TStat,TChange>.into_configs()
@@ -132,8 +182,8 @@ pub struct StatChangeToApplyChangesCfg;
 
 impl<TStat,TChange> Func< PhantomData<(TStat,TChange)> > for StatChangeToApplyChangesCfg
 where 
-	TStat:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
-	TChange:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
+	TStat:Zero+AddAssign<TChange> + Send + Sync+'static,
+	TChange:Zero+AddAssign<TChange> + Send + Sync+'static,
 {
 	type Output=ScheduleConfigs<bevy::ecs::system::ScheduleSystem>;
 
@@ -146,8 +196,8 @@ where
 
 impl<TStat,TChange> Func< (PhantomData<TStat>,PhantomData<TChange>) > for StatChangeToApplyChangesCfg
 where 
-	TStat:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
-	TChange:Zero+AddAssign<TChange> + std::marker::Send + std::marker::Sync+'static,
+	TStat:Zero+AddAssign<TChange> + Send + Sync+'static,
+	TChange:Zero+AddAssign<TChange> + Send + Sync+'static,
 {
 	type Output=ScheduleConfigs<bevy::ecs::system::ScheduleSystem>;
 

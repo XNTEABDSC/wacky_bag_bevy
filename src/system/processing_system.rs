@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 
 use bevy::{ecs::schedule::{Schedulable, ScheduleConfigs, SystemSet}, utils::default};
 use frunk::{Func, Poly, hlist::{HFoldLeftable, HMappable}};
-use wacky_bag::{impl_phantom, utils::{type_fn::{OneOneMappingTypeFunc, TypeFunc}}};
+use wacky_bag::{impl_phantom, utils::{type_fn::{BijectiveTypeFunc, TypeFunc}}};
 
 use crate::system::multi_sets::{FoldScheduleConfigsAfterSets, FoldScheduleConfigsBeforeSets, FoldScheduleConfigsInSet, ScheduleConfigsAfterSets, ScheduleConfigsBeforeSets, ScheduleConfigsInSets};
 
@@ -27,7 +27,7 @@ impl<T> TypeFunc<T> for MapToProcessingSystemSet {
 	type Output=ProcessingSystemSet<T>;
 }
 
-impl<T> OneOneMappingTypeFunc<ProcessingSystemSet<T>> for MapToProcessingSystemSet {
+impl<T> BijectiveTypeFunc<ProcessingSystemSet<T>> for MapToProcessingSystemSet {
 	type Input=T;
 }
 

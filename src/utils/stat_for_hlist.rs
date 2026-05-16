@@ -1,13 +1,13 @@
-use std::{marker::PhantomData, ops::{AddAssign, Neg}};
+use std::{marker::PhantomData, ops::{AddAssign, DerefMut, Neg}};
 
 use frunk::Func;
 use num_traits::Zero;
-use wacky_bag::utils::type_fn::{OneOneMappingFunc, OneOneMappingTypeFunc, ReverseFunc, TypeFunc};
-// use wacky_bag::utils::output_func::OneOneMappingFunc;
+use wacky_bag::utils::type_fn::{BijectiveFunc, BijectiveTypeFunc, ReverseFunc, TypeFunc};
+// use wacky_bag::utils::output_func::BijectiveFunc;
 
 use crate::stat_component::{change::{Change, transfer_changes}, determining::Determining, determining_apply_changes::{change_apply_change, stat_apply_change}, stat::Stat};
 
-
+#[derive(Debug,Default,Clone, Copy)]
 pub struct MapToStat;
 
 impl<T> Func<T> for MapToStat {
@@ -21,10 +21,10 @@ impl<T> Func<T> for MapToStat {
 impl<T> TypeFunc<T> for MapToStat {
 	type Output=Stat<T>;
 }
-impl<T> OneOneMappingTypeFunc<Stat<T>> for MapToStat {
+impl<T> BijectiveTypeFunc<Stat<T>> for MapToStat {
 	type Input=T;
 }
-impl<T> OneOneMappingFunc<Stat<T>> for MapToStat {
+impl<T> BijectiveFunc<Stat<T>> for MapToStat {
 	type Input=T;
 
 	fn inv_call(output:Stat<T>)->Self::Input {
@@ -32,6 +32,7 @@ impl<T> OneOneMappingFunc<Stat<T>> for MapToStat {
 	}
 }
 
+#[derive(Debug,Default,Clone, Copy)]
 pub struct MapToChange;
 
 impl<T> Func<T> for MapToChange {
@@ -45,17 +46,18 @@ impl<T> Func<T> for MapToChange {
 impl<T> TypeFunc<T> for MapToChange {
 	type Output=Change<T>;
 }
-impl<T> OneOneMappingTypeFunc<Change<T>> for MapToChange {
+impl<T> BijectiveTypeFunc<Change<T>> for MapToChange {
 	type Input=T;
 }
 
+#[derive(Debug,Default,Clone, Copy)]
 pub struct MapToDetermining;
 
 impl<T> TypeFunc<T> for MapToDetermining {
 	type Output=Determining<T>;
 }
 
-impl<T> OneOneMappingTypeFunc<Determining<T>> for MapToDetermining {
+impl<T> BijectiveTypeFunc<Determining<T>> for MapToDetermining {
 	type Input=T;
 }
 
@@ -70,7 +72,9 @@ impl<T> Func<T> for MapToDetermining
 
 pub type MapFromStat=ReverseFunc<MapToStat>;
 
-
+/// `&Stat<T>` <-> `&T`
+/// `a:&Stat<T>` -> `b:&T`
+#[derive(Debug,Default,Clone, Copy)]
 pub struct MapFromStatRef;
 
 impl<'a,T> Func<&'a Stat<T>> for MapFromStatRef {
@@ -84,10 +88,11 @@ impl<'a,T> Func<&'a Stat<T>> for MapFromStatRef {
 impl<'a,T> TypeFunc<&'a Stat<T>> for MapFromStatRef {
 	type Output=&'a T;
 }
-impl<'a,T> OneOneMappingTypeFunc<&'a T> for MapFromStatRef {
+impl<'a,T> BijectiveTypeFunc<&'a T> for MapFromStatRef {
 	type Input=&'a Stat<T>;
 }
 
+#[derive(Debug,Default,Clone, Copy)]
 pub struct MapFromStatMut;
 
 impl<'a,T> Func<&'a mut Stat<T>> for MapFromStatMut {
@@ -101,7 +106,7 @@ impl<'a,T> Func<&'a mut Stat<T>> for MapFromStatMut {
 impl<'a,T> TypeFunc<&'a mut Stat<T>> for MapFromStatMut {
 	type Output=&'a mut T;
 }
-impl<'a,T> OneOneMappingTypeFunc<&'a mut T> for MapFromStatMut {
+impl<'a,T> BijectiveTypeFunc<&'a mut T> for MapFromStatMut {
 	type Input=&'a mut Stat<T>;
 }
 
@@ -131,6 +136,7 @@ impl<'a,T> TypeFunc<T> for Select2ChangeRef<'a>
 	type Output = (&'a Change<T>,&'a Change<T>);
 }
 
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HAddChange;
 impl<'a,T> Func<(T,&'a Change<T>)> for HAddChange 
 	where T:std::ops::AddAssign
@@ -141,6 +147,8 @@ impl<'a,T> Func<(T,&'a Change<T>)> for HAddChange
 		i.1.add_change(i.0);
 	}
 }
+
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HApplyChange;
 impl<'a,T> Func<(&'a mut Change<T>,&'a mut Stat<T>)> for HApplyChange 
 	where T:std::ops::AddAssign+Zero
@@ -153,6 +161,7 @@ impl<'a,T> Func<(&'a mut Change<T>,&'a mut Stat<T>)> for HApplyChange
 	}
 }
 
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HChangeGetAndReset;
 impl<'a,T> Func<&'a mut Change<T>> for HChangeGetAndReset 
 	where T:std::ops::AddAssign+Zero
@@ -163,6 +172,8 @@ impl<'a,T> Func<&'a mut Change<T>> for HChangeGetAndReset
 		i.get_and_reset()
 	}
 }
+
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HChangeAdd;
 impl<'a,T> Func<(T,&'a Change<T>)> for HChangeAdd 
 	where T:std::ops::AddAssign+Zero
@@ -175,6 +186,25 @@ impl<'a,T> Func<(T,&'a Change<T>)> for HChangeAdd
 	}
 }
 
+
+#[derive(Debug,Default,Clone, Copy)]
+pub struct HStatSet;
+impl<'a,T,SR> Func<(T,SR)> for HStatSet 
+	where
+	
+	SR:DerefMut<Target = Stat<T>>
+{
+	type Output=();
+
+	fn call(mut i: (T,SR)) -> Self::Output {
+		//*i.1.0+=i.0.get_and_reset();
+		// i.1.add_change(i.0);
+		let s=i.1.deref_mut();
+		s.0=i.0;
+	}
+}
+
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HChangeTransfer;
 impl<'a,T,TSrc,TTar> Func<(T,(&'a Change<TSrc>,&'a Change<TTar>))> for HChangeTransfer
 	where TTar:AddAssign<T>,
@@ -188,6 +218,8 @@ impl<'a,T,TSrc,TTar> Func<(T,(&'a Change<TSrc>,&'a Change<TTar>))> for HChangeTr
 	}
 	
 }
+
+#[derive(Debug,Default,Clone, Copy)]
 pub struct HChangeApplyChange;
 impl<'a,T> Func<(&'a mut Change<T>,&'a Change<T>)> for HChangeApplyChange 
 	where T:std::ops::AddAssign+Zero

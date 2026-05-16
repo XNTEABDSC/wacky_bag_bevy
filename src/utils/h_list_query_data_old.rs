@@ -1,5 +1,5 @@
 use bevy::ecs::query::{Access, QueryData, ReadOnlyQueryData, ReleaseStateQueryData, WorldQuery};
-use frunk::{HCons, HNil, hlist::h_cons};
+use frunk::{HCons, HNil};
 
 
 /// allows to use hlist as QueryData
@@ -64,13 +64,19 @@ unsafe impl WorldQuery for HQueryData<HNil> {
 	}
 }
 
-unsafe impl<H,T> WorldQuery for HQueryData<HCons<H,T>>
+unsafe impl<H,T,HState,TState> WorldQuery for HQueryData<HCons<H,T>>
 where 
-	H:WorldQuery,
-	HQueryData<T>:WorldQuery
+	H:WorldQuery<State = HState>,
+	HQueryData<T>:WorldQuery<State = TState>,
+	TState:Send+Sync+Sized,
+	HState:Send+Sync+Sized,
+	// for<'w> <H as WorldQuery>::Fetch<'w> : Clone,
+	// for<'w> HCons< H::Fetch<'w> , <HQueryData<T> as WorldQuery>::Fetch<'w> >:Clone,
+	// for<'w> <HQueryData<T> as WorldQuery>::Fetch<'w> : Clone,
 {
-	
-	type State = HCons< H::State , <HQueryData<T> as WorldQuery>::State >;
+	type State = HCons< HState , TState >;
+
+	//type State = HCons< HState , TState >;
 	
 	type Fetch<'w> = HCons< H::Fetch<'w> , <HQueryData<T> as WorldQuery>::Fetch<'w> >;
 
@@ -157,7 +163,7 @@ unsafe impl QueryData for HQueryData<HNil> {
 
 	type ReadOnly=Self;
 
-	type Item<'w, 's>=Self;
+	type Item<'w, 's>=HNil;
 
 	fn shrink<'wlong: 'wshort, 'wshort, 's>(
 		item: Self::Item<'wlong, 's>,
@@ -171,7 +177,7 @@ unsafe impl QueryData for HQueryData<HNil> {
 		_entity: bevy::ecs::entity::Entity,
 		_table_row: bevy::ecs::storage::TableRow,
 	) -> Option<Self::Item<'w, 's>> {
-		Some(HQueryData(HNil))
+		Some(HNil)
 	}
 
 	fn iter_access(state: &Self::State) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
@@ -181,11 +187,17 @@ unsafe impl QueryData for HQueryData<HNil> {
 
 unsafe impl ReadOnlyQueryData for HQueryData<HNil> {}
 
-unsafe impl<H,T,TReadOnlyInner> QueryData for HQueryData<HCons<H,T>>
+unsafe impl<H,T,TReadOnlyInner,HState,TState> QueryData for HQueryData<HCons<H,T>>
 where 
-	H:QueryData,
-	HQueryData<T>:QueryData<ReadOnly = HQueryData<TReadOnlyInner>>,
-	HQueryData<TReadOnlyInner>: ReadOnlyQueryData<State = <HQueryData<T> as WorldQuery>::State>,
+	H: QueryData<State = HState>,
+
+	HQueryData<T>: QueryData<ReadOnly = HQueryData<TReadOnlyInner>, State = TState>,
+
+	HQueryData< HCons<H::ReadOnly, TReadOnlyInner> > : ReadOnlyQueryData <State = 
+		HCons< HState, TState >
+	>,
+	TState:Send+Sync+Sized,
+	HState:Send+Sync+Sized,
 {
 	const IS_READ_ONLY: bool = H::IS_READ_ONLY && <HQueryData<T> as QueryData>::IS_READ_ONLY;
 
@@ -232,15 +244,16 @@ where
 
 unsafe impl<H,T> ReadOnlyQueryData for HQueryData<HCons<H,T>>
 where 
-	H:ReadOnlyQueryData, 
-	HQueryData<T>:ReadOnlyQueryData
+	H: ReadOnlyQueryData,
+
+	HQueryData<T>:ReadOnlyQueryData,
 {
 	
 }
 
 impl ReleaseStateQueryData for HQueryData<HNil> {
 	fn release_state<'w>(_item: Self::Item<'w, '_>) -> Self::Item<'w, 'static> {
-		HQueryData(HNil)
+		HNil
 	}
 }
 
@@ -257,4 +270,39 @@ where
 			tail:<HQueryData<T> as ReleaseStateQueryData>::release_state(item.tail)
 		}
 	}
+}
+
+
+
+#[cfg(test)]
+mod test{
+	use super::*;
+    use bevy::ecs::{component::Component, system::Query};
+use frunk::HList;
+
+	#[derive(Component)]
+	struct C1;
+	#[derive(Component)]
+	struct C2;
+
+	fn check_w_q<Q>()
+		where Q:WorldQuery
+	{}
+
+	
+	fn check_q_d<Q>()
+		where Q:QueryData
+	{}
+
+	fn test(){
+		check_w_q::< HQueryData<HList!(&C1,&C2)>>();
+
+		check_q_d::< HQueryData<HList!(&C1,&C2)> >();
+
+		check_q_d::< HQueryData<HList!(&C1,&C2,&C1)> >();
+	}
+
+	// fn test2(q:Query<HQueryData<HList!(&C1,&C2)>>){
+
+	// }
 }
