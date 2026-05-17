@@ -2,10 +2,10 @@
 
 use std::{mem, ops::{AddAssign, Neg}, sync::Mutex};
 
-use bevy::prelude::Component;
+use bevy::{prelude::Component, reflect::Reflect};
 use num_traits::Zero;
 
-#[derive(Component,Debug)]
+#[derive(Component,Debug,Reflect)]
 pub struct Change<T>(pub Mutex<T>);
 
 impl<T:Zero> Default for Change<T> {

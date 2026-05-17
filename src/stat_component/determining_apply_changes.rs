@@ -2,7 +2,7 @@
 
 use std::{marker::{PhantomData, Send, Sync}, ops::{AddAssign, Deref, DerefMut}};
 
-use bevy::{app::{App, FixedPostUpdate}, ecs::{query::With, schedule::{Chain, GraphInfo, IntoScheduleConfigs, Schedulable, ScheduleConfigs}, system::{Query, ScheduleSystem}}, utils::default};
+use bevy::{app::{App, FixedPostUpdate, Plugin, PluginGroup, PluginGroupBuilder}, ecs::{query::With, schedule::{Chain, GraphInfo, IntoScheduleConfigs, Schedulable, ScheduleConfigs}, system::{Query, ScheduleSystem}}, utils::default};
 use frunk::{Func, HList, HNil, Poly, hlist::{HFoldLeftable, HMappable, HZippable}};
 use num_traits::Zero;
 use physics_basic::stat_to_change_type::StatToChangeType;
@@ -70,10 +70,10 @@ impl<T,M,C> Func<(PhantomData<T>,PhantomData<M>)> for MapToDeterminingApplyChang
 		T:StatToChangeType<M,ChangeType=C>,
 		C:Zero + Send + Sync+'static,
 {
-	type Output=fn(&mut App);
+	type Output=DeterminingApplyChanges2Plugin<T,C>;
 
 	fn call(_i: (PhantomData<T>,PhantomData<M>)) -> Self::Output {
-		determining_apply_changes_2_plugin::<T,C>
+		DeterminingApplyChanges2Plugin::<T,C>::default()
 	}
 }
 
@@ -83,10 +83,11 @@ impl<T,M,C> Func<PhantomData<(T,M)>> for MapToDeterminingApplyChanges2Plugin
 		T:StatToChangeType<M,ChangeType=C>,
 		C:Zero + Send + Sync+'static,
 {
-	type Output=fn(&mut App);
+	type Output=DeterminingApplyChanges2Plugin<T,C>;
 
 	fn call(_i: PhantomData<(T,M)>) -> Self::Output {
-		determining_apply_changes_2_plugin::<T,C>
+		// determining_apply_changes_2_plugin::<T,C>
+		DeterminingApplyChanges2Plugin::<T,C>::default()
 	}
 }
 
@@ -109,17 +110,52 @@ pub fn determining_apply_changes_2<TStat,TChange>(mut query:Query<(&mut Stat<TSt
 		stat_apply_change(change,stat);
     });
 }
-pub fn determining_apply_changes_2_plugin<TStat,TChange>(app:&mut App)
-    where 
-        TStat:AddAssign<TChange> + Send + Sync+'static,
-        TChange:Zero + Send + Sync+'static,
+// pub fn determining_apply_changes_2_plugin<TStat,TChange>(app:&mut App)
+//     where 
+//         TStat:AddAssign<TChange> + Send + Sync+'static,
+//         TChange:Zero + Send + Sync+'static,
+// {
+// 	app.add_systems(FixedPostUpdate, 
+// 		determining_apply_changes_2::<TStat,TChange>.into_configs()
+// 		.config_processing::<HNil,HNil,HList!(Stat<TStat>,Change<TChange>)>()
+// 	);
+// }
+#[derive(Debug, Clone, Copy)]
+pub struct DeterminingApplyChanges2Plugin<TStat,TChange>(pub PhantomData<(TStat,TChange)>)
+where TStat:AddAssign<TChange> + Send + Sync+'static,
+    TChange:Zero + Send + Sync+'static
+;
+
+impl<TStat, TChange> Default for DeterminingApplyChanges2Plugin<TStat, TChange>
+where TStat:AddAssign<TChange> + Send + Sync+'static,
+    TChange:Zero + Send + Sync+'static
 {
-	app.add_systems(FixedPostUpdate, 
-		determining_apply_changes_2::<TStat,TChange>.into_configs()
-		.config_processing::<HNil,HNil,HList!(Stat<TStat>,Change<TChange>)>()
-	);
+    fn default() -> Self {
+		Self(Default::default())
+	}
+}
+impl<TStat,TChange> Plugin for DeterminingApplyChanges2Plugin<TStat,TChange>
+where 
+	TStat:AddAssign<TChange> + Send + Sync+'static,
+    TChange:Zero + Send + Sync+'static
+{
+	fn build(&self, app: &mut App) {
+		app.add_systems(FixedPostUpdate, 
+			determining_apply_changes_2::<TStat,TChange>.into_configs()
+			.config_processing::<HNil,HNil,HList!(Stat<TStat>,Change<TChange>)>()
+		);
+	}
 }
 
+// impl<TStat,TChange> PluginGroup for DeterminingApplyChanges2Plugin
+// where TStat:AddAssign<TChange> + Send + Sync+'static,
+//     TChange:Zero + Send + Sync+'static
+// {
+// 	fn build(self) -> bevy::app::PluginGroupBuilder {
+// 		PluginGroupBuilder::start::<Self>()
+// 		.add(plugin)
+// 	}
+// }
 
 
 pub fn determining_apply_changes_2_spawn<TStats,TChanges>()
