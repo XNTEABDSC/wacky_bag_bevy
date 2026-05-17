@@ -2,7 +2,7 @@
 
 use std::{marker::{PhantomData, Send, Sync}, ops::{AddAssign, Deref, DerefMut}};
 
-use bevy::{app::{App, FixedPostUpdate, Plugin, PluginGroup, PluginGroupBuilder}, ecs::{query::With, schedule::{Chain, GraphInfo, IntoScheduleConfigs, Schedulable, ScheduleConfigs}, system::{Query, ScheduleSystem}}, utils::default};
+use bevy::{app::{App, FixedPostUpdate, Plugin}, ecs::{query::With, schedule::{Chain, GraphInfo, IntoScheduleConfigs, Schedulable, ScheduleConfigs}, system::{Query, ScheduleSystem}}, utils::default};
 use frunk::{Func, HList, HNil, Poly, hlist::{HFoldLeftable, HMappable, HZippable}};
 use num_traits::Zero;
 use physics_basic::stat_to_change_type::StatToChangeType;

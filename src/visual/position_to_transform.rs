@@ -3,7 +3,7 @@ use nalgebra::{RealField, SVector};
 use physics_basic::stats::{Pos, Vel};
 
 
-use crate::{physics::{}, stat_component::stat::Stat};
+use crate::stat_component::stat::Stat;
 
 
 fn vec_fix_to_vec_f32<Num:RealField>(a:SVector<Num,3>)->Vec3 {

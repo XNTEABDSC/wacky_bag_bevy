@@ -52,7 +52,7 @@ unsafe impl WorldQuery for HQueryData<HNil> {
 		
 	}
 
-	fn get_state(components: &bevy::ecs::component::Components) -> Option<Self::State> {
+	fn get_state(_components: &bevy::ecs::component::Components) -> Option<Self::State> {
 		Some(())
 	}
 
@@ -180,7 +180,7 @@ unsafe impl QueryData for HQueryData<HNil> {
 		Some(HNil)
 	}
 
-	fn iter_access(state: &Self::State) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
+	fn iter_access(_state: &Self::State) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
 		std::iter::empty()
 	}
 }

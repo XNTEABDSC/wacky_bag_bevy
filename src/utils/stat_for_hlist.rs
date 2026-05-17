@@ -248,7 +248,7 @@ impl<'a,T> Func<&'a Change<T>> for MapTakeStatChange
 {
 	type Output=Change<T>;
 
-	fn call(i: &'a Change<T>) -> Self::Output {
+	fn call(_i: &'a Change<T>) -> Self::Output {
 		Change::default()
 	}
 }
