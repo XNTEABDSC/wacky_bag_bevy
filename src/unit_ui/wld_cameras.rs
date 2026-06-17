@@ -1,4 +1,4 @@
-use bevy::{app::App, ecs::{entity::Entity, resource::Resource}, reflect::Reflect};
+use bevy::{ecs::{entity::Entity, resource::Resource}, reflect::Reflect};
 
 
 #[derive(Resource,Default,Debug,Reflect)]
@@ -12,8 +12,4 @@ impl<'a> IntoIterator for &'a WorldCameras {
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter()
     }
-}
-
-pub fn plugin(app:&mut App){
-    app.init_resource::<WorldCameras>();
 }

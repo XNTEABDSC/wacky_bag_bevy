@@ -18,8 +18,8 @@ use crate::system::multi_sets::{FoldScheduleConfigsAfterSets, FoldScheduleConfig
 /// 
 /// see [ScheduleConfigsProcessing::config_processing] for simple usage.
 #[derive(SystemSet)]
-pub struct ProcessingSystemSet<T>(PhantomData<T>);
-impl_phantom!(ProcessingSystemSet);
+pub struct ProcessingSystemSet<T>(pub PhantomData<T>);
+impl_phantom!(ProcessingSystemSet<T>);
 
 pub struct MapToProcessingSystemSet;
 
@@ -42,32 +42,32 @@ impl<T> Func<T> for MapToProcessingSystemSet {
 pub type ProcessingSystemSets<Components>=wacky_bag::utils::h_list_helpers::HMap< Components , Poly<MapToProcessingSystemSet> >;
 
 pub fn processing_system_sets<Components>()->ProcessingSystemSets<Components>
-	where Components:HMappable<Poly<MapToProcessingSystemSet>>,
-		<Components as HMappable<Poly<MapToProcessingSystemSet>>>::Output: Default
+where Components:HMappable<Poly<MapToProcessingSystemSet>>,
+	<Components as HMappable<Poly<MapToProcessingSystemSet>>>::Output: Default
 {
 	default::<ProcessingSystemSets<Components>>()
 }
 
 pub fn schedule_config_processing<T,InputCompoents,ProcessingComponents,OutputComponents>(schedule_configs:ScheduleConfigs<T>)->ScheduleConfigs<T>
-	where T:Schedulable<Metadata = bevy::ecs::schedule::GraphInfo, GroupMetadata = bevy::ecs::schedule::Chain>,
-		
-		InputCompoents:HMappable< Poly<MapToProcessingSystemSet> ,
-			Output : 
-				Default 
-				+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-			>,
-		
-		ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-			Output : 
-				Default 
-				+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-			>,
-		
-		OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-			Output : 
-				Default 
-				+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-			>,
+where T:Schedulable<Metadata = bevy::ecs::schedule::GraphInfo, GroupMetadata = bevy::ecs::schedule::Chain>,
+	
+	InputCompoents:HMappable< Poly<MapToProcessingSystemSet> ,
+		Output : 
+			Default 
+			+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+		>,
+	
+	ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+		Output : 
+			Default 
+			+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+		>,
+	
+	OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+		Output : 
+			Default 
+			+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+		>,
 {
 	schedule_configs
 		.after_sets(processing_system_sets::<InputCompoents>())
@@ -86,24 +86,24 @@ pub trait ScheduleConfigsProcessing<T>
 	/// 
 	/// `InputComponents` `ProcessingComponents` `OutputComponents` can actually be any type marker, which is suggested to be [Component][bevy::prelude::Component] or [Resource][bevy::prelude::Resource] 
 	fn config_processing<InputComponents,ProcessingComponents,OutputComponents>(self)->ScheduleConfigs<T>
-		where 
-			InputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
-			
-			ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
-			
-			OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
+	where 
+		InputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
+		
+		ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
+		
+		OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
 	;
 }
 
@@ -111,24 +111,24 @@ impl<T> ScheduleConfigsProcessing<T> for ScheduleConfigs<T>
 	where T:Schedulable<Metadata = bevy::ecs::schedule::GraphInfo, GroupMetadata = bevy::ecs::schedule::Chain>
 {
 	fn config_processing<InputCompoents,ProcessingComponents,OutputComponents>(self)->ScheduleConfigs<T>
-		where 
-			InputCompoents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
-		
-			ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
-		
-			OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
-				Output : 
-					Default 
-					+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
-				>,
+	where 
+		InputCompoents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsAfterSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
+	
+		ProcessingComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsInSet>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
+	
+		OutputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
+			Output : 
+				Default 
+				+HFoldLeftable<Poly<FoldScheduleConfigsBeforeSets>, ScheduleConfigs<T>,Output = ScheduleConfigs<T>>
+			>,
 	{
 		schedule_config_processing::<T,InputCompoents,ProcessingComponents,OutputComponents>(self)
 	}

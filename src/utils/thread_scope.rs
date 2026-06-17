@@ -1,5 +1,5 @@
 
-use bevy::tasks::{ComputeTaskPool, Scope};
+use bevy::tasks::{ComputeTaskPool, Scope, TaskPool};
 use wacky_bag::traits::scope_no_ret::{
     ThreadScope, ThreadScopeCreator, ThreadScopeUser,
 };
@@ -23,7 +23,7 @@ impl ThreadScopeCreator for ComputeTaskPoolScopeCreater {
         F: ThreadScopeUser<'env>,
     {
         // ThreadScopeCreatorStd
-        ComputeTaskPool::get().scope(|s: &bevy::tasks::Scope<'_, '_, _>| {
+        ComputeTaskPool::get_or_init(TaskPool::default).scope(|s: &bevy::tasks::Scope<'_, '_, _>| {
 			let a=ComputeTaskPoolScope(s);
 			f.use_scope(a);
         });

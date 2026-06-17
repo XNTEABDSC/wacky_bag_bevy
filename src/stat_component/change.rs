@@ -23,7 +23,11 @@ impl<T:Zero> Default for Change<T> {
 
 impl<T> Change<T>
 {
-    pub fn add_change<A>(&self,change:A)
+    pub fn new(value: T) -> Self {
+		Self(Mutex::new(value))
+	}
+	
+	pub fn add_change<A>(&self,change:A)
         where 
             // TInner:std::ops::AddAssign<TInner>,
             // T:Into<TInner> + Deref<Target = TInner> + DerefMut,
@@ -43,7 +47,17 @@ impl<T> Change<T>
     //     let mut a=self.0.lock().unwrap();
     //     *a.deref_mut().deref_mut()+=change;
     // }
+
+	/// get the inner value and reset self.
     pub fn get_and_reset(&mut self)->T
+        where T:Zero
+    {
+        let mut b=self.0.lock().unwrap();
+        mem::replace(&mut b,Zero::zero())
+    }
+	/// get the inner value and reset self.
+	/// just remind you that normally you should be able to have `&mut self` to [`Self::get_and_reset`].
+	pub fn get_and_reset_ref(&self)->T
         where T:Zero
     {
         let mut b=self.0.lock().unwrap();
