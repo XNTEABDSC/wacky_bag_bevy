@@ -3,7 +3,8 @@ use std::marker::PhantomData;
 
 use bevy::{ecs::schedule::{Schedulable, ScheduleConfigs, SystemSet}, utils::default};
 use frunk::{Func, Poly, hlist::{HFoldLeftable, HMappable}};
-use wacky_bag::{impl_phantom, utils::{type_fn::{BijectiveTypeFunc, TypeFunc}}};
+use wacky_bag::{impl_phantom, };
+use wacky_bag_hlist::{type_fn::{BijectiveTypeFunc, TypeFunc}};
 
 use crate::system::multi_sets::{FoldScheduleConfigsAfterSets, FoldScheduleConfigsBeforeSets, FoldScheduleConfigsInSet, ScheduleConfigsAfterSets, ScheduleConfigsBeforeSets, ScheduleConfigsInSets};
 
@@ -39,7 +40,7 @@ impl<T> Func<T> for MapToProcessingSystemSet {
 	}
 }
 
-pub type ProcessingSystemSets<Components>=wacky_bag::utils::h_list_helpers::HMap< Components , Poly<MapToProcessingSystemSet> >;
+pub type ProcessingSystemSets<Components>=wacky_bag_hlist::h_list_helpers::HMap< Components , Poly<MapToProcessingSystemSet> >;
 
 pub fn processing_system_sets<Components>()->ProcessingSystemSets<Components>
 where Components:HMappable<Poly<MapToProcessingSystemSet>>,

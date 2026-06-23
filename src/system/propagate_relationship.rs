@@ -151,14 +151,15 @@ pub fn propagate_leaf_to_root<T,R>(
 
 pub trait PropagateRootToLeaf:Clone
 {
+	type DataBegin:QueryData;
 	type Data:QueryData;
-	fn from_data<'w,'s>(values:&ROQueryItem<'w,'s,Self::Data>)->Self;
+	fn from_data<'w,'s>(values:&ROQueryItem<'w,'s,Self::DataBegin>)->Self;
 	fn process_data<'w,'s>(&mut self,values:&ROQueryItem<'w,'s,Self::Data>);
 }
 
 pub fn propagate_root_to_leaf<T,R>(
 	mut ps:ParamSet<(
-		Query<(T::Data,&R::RelationshipTarget),(Without<R>,)>,
+		Query<(T::DataBegin,&R::RelationshipTarget),(Without<R>,)>,
 		Query<(T::Data,&R,Option<&R::RelationshipTarget>)>,
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,

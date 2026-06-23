@@ -1,5 +1,5 @@
 use bevy::ecs::query::{Access, QueryData, ReadOnlyQueryData, ReleaseStateQueryData, WorldQuery};
-use frunk::{HCons, HNil};
+use frunk::{HCons, HNil, hlist::IntoTuple2};
 
 
 /// allows to use hlist as QueryData
@@ -14,11 +14,14 @@ pub trait HToQuery {
 	fn to_query(self)->Self::Output;
 }
 
-pub type HToQueryType<T>=<T as HToQuery>::Output;
+pub type HToQueryType<T>=
+	<T as HToQuery>::Output;
+	// (<T as IntoTuple2>::HeadType,<T as IntoTuple2>::TailOutput);
 
 impl HToQuery for HNil {
 	type Output=HQueryNil;
 
+	#[inline]
 	fn to_query(self)->Self::Output {
 		HQueryNil(HNil)
 	}
@@ -29,6 +32,7 @@ impl<H,T> HToQuery for HCons<H,T>
 {
 	type Output=HQueryCons<H,T::Output>;
 
+	#[inline]
 	fn to_query(self)->Self::Output {
 		HQueryCons(HCons { head: self.head, tail: self.tail.to_query() })
 	}
@@ -40,10 +44,12 @@ unsafe impl WorldQuery for HQueryNil {
 
 	type State=();
 
+	#[inline]
 	fn shrink_fetch<'wlong: 'wshort, 'wshort>(_fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
 		
 	}
 
+	#[inline]
 	unsafe fn init_fetch<'w, 's>(
 		_world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
 		_state: &'s Self::State,
@@ -55,6 +61,7 @@ unsafe impl WorldQuery for HQueryNil {
 
 	const IS_DENSE: bool = true;
 
+	#[inline]
 	unsafe fn set_archetype<'w, 's>(
 		_fetch: &mut Self::Fetch<'w>,
 		_state: &'s Self::State,
@@ -64,6 +71,7 @@ unsafe impl WorldQuery for HQueryNil {
 		
 	}
 
+	#[inline]
 	unsafe fn set_table<'w, 's>(
 		_fetch: &mut Self::Fetch<'w>,
 		_state: &'s Self::State,
@@ -72,18 +80,22 @@ unsafe impl WorldQuery for HQueryNil {
 		
 	}
 
+	#[inline]
 	fn update_component_access(_state: &Self::State, _access: &mut bevy::ecs::query::FilteredAccess) {
 		
 	}
 
+	#[inline]
 	fn init_state(_world: &mut bevy::ecs::world::World) -> Self::State {
 		
 	}
 
+	#[inline]
 	fn get_state(_components: &bevy::ecs::component::Components) -> Option<Self::State> {
 		Some(())
 	}
 
+	#[inline]
 	fn matches_component_set(
 		_state: &Self::State,
 		_set_contains_id: &impl Fn(bevy::ecs::component::ComponentId) -> bool,
@@ -109,18 +121,20 @@ where
 	type Fetch<'w> = HCons< H::Fetch<'w> , <T as WorldQuery>::Fetch<'w> >;
 
 
+	#[inline]
 	fn shrink_fetch<'wlong: 'wshort, 'wshort>(fetch: Self::Fetch<'wlong>) -> Self::Fetch<'wshort> {
-		// todo!()
+		 
 		HCons{head:H::shrink_fetch(fetch.head),tail:<T as WorldQuery>::shrink_fetch(fetch.tail)}
 	}
 
+	#[inline]
 	unsafe fn init_fetch<'w, 's>(
 		world: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'w>,
 		state: &'s Self::State,
 		last_run: bevy::ecs::change_detection::Tick,
 		this_run: bevy::ecs::change_detection::Tick,
 	) -> Self::Fetch<'w> {
-		// todo!()
+		
 		HCons{
 			head:unsafe { H::init_fetch(world, &state.head, last_run, this_run) },
 			tail:unsafe { <T as WorldQuery>::init_fetch(world, &state.tail, last_run, this_run) }
@@ -130,7 +144,7 @@ where
 	const IS_DENSE: bool = {
 		H::IS_DENSE && <T as WorldQuery>::IS_DENSE
 	};
-
+	#[inline]
 	unsafe fn set_archetype<'w, 's>(
 		fetch: &mut Self::Fetch<'w>,
 		state: &'s Self::State,
@@ -143,6 +157,7 @@ where
 		
 	}
 
+	#[inline]
 	unsafe fn set_table<'w, 's>(
 		fetch: &mut Self::Fetch<'w>,
 		state: &'s Self::State,
@@ -152,11 +167,13 @@ where
 		unsafe { <T as WorldQuery>::set_table(&mut fetch.tail, &state.tail, table) };
 	}
 
+	#[inline]
 	fn update_component_access(state: &Self::State, access: &mut bevy::ecs::query::FilteredAccess) {
 		H::update_component_access(&state.head, access);
 		<T as WorldQuery>::update_component_access(&state.tail,access);
 	}
 
+	#[inline]
 	fn init_state(world: &mut bevy::ecs::world::World) -> Self::State {
 		HCons{
 			head:H::init_state(world),
@@ -165,6 +182,7 @@ where
 		
 	}
 
+	#[inline]
 	fn get_state(components: &bevy::ecs::component::Components) -> Option<Self::State> {
 		Some(
 		HCons{
@@ -174,6 +192,7 @@ where
 		)
 	}
 
+	#[inline]
 	fn matches_component_set(
 		state: &Self::State,
 		set_contains_id: &impl Fn(bevy::ecs::component::ComponentId) -> bool,
@@ -193,12 +212,14 @@ unsafe impl QueryData for HQueryNil {
 
 	type Item<'w, 's>=HNil;
 
+	#[inline]
 	fn shrink<'wlong: 'wshort, 'wshort, 's>(
 		item: Self::Item<'wlong, 's>,
 	) -> Self::Item<'wshort, 's> {
 		item
 	}
 
+	#[inline]
 	unsafe fn fetch<'w, 's>(
 		_state: &'s Self::State,
 		_fetch: &mut Self::Fetch<'w>,
@@ -208,6 +229,7 @@ unsafe impl QueryData for HQueryNil {
 		Some(HNil)
 	}
 
+	#[inline]
 	fn iter_access(_state: &Self::State) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
 		std::iter::empty()
 	}
@@ -235,6 +257,7 @@ where
 
 	type Item<'w, 's> = HCons< H::Item<'w,'s>, <T as QueryData>::Item<'w,'s> >;
 
+	#[inline]
 	fn shrink<'wlong: 'wshort, 'wshort, 's>(
 		item: Self::Item<'wlong, 's>,
 	) -> Self::Item<'wshort, 's> {
@@ -245,6 +268,7 @@ where
 		}
 	}
 
+	#[inline]
 	fn provide_extra_access(
 		state: &mut Self::State,
 		access: &mut Access,
@@ -254,6 +278,7 @@ where
 		<T as QueryData>::provide_extra_access(&mut state.tail, access, available_access);
 	}
 
+	#[inline]
 	unsafe fn fetch<'w, 's>(
 		state: &'s Self::State,
 		fetch: &mut Self::Fetch<'w>,
@@ -265,6 +290,7 @@ where
 		Some(HCons { head: h, tail: t })
 	}
 
+	#[inline]
 	fn iter_access(state: &Self::State) -> impl Iterator<Item = bevy::ecs::query::EcsAccessType<'_>> {
 		H::iter_access(&state.head).chain(<T as QueryData>::iter_access(&state.tail))
 	}
@@ -292,6 +318,7 @@ where
 	TReadOnlyInner: ReadOnlyQueryData<State = <T as WorldQuery>::State>,
 	T:ReleaseStateQueryData
 {
+	#[inline]
 	fn release_state<'w>(item: Self::Item<'w, '_>) -> Self::Item<'w, 'static> {
 		HCons{
 			head:H::release_state(item.head),

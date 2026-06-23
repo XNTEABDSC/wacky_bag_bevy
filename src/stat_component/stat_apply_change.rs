@@ -8,7 +8,7 @@ use frunk::{Func, HList, HNil, Poly, hlist::{HFoldLeftable, HMappable, HZippable
 
 use num_traits::Zero;
 use physics_basic::stat_to_change_type::StatToChangeType;
-use wacky_bag::utils::{h_list_helpers::{FoldVecPush, HMapP, HRepeatFrom, HZip, MapToPhantom}, type_fn::TypeFunc};
+use wacky_bag_hlist::{new_struct_func,{h_list_helpers::{FoldVecPush, HMapP, HRepeatFrom, HZip, MapToPhantom}, type_fn::TypeFunc}};
 use wacky_bag::structures::owned::Owned;
 use crate::{stat_component::{change::Change, determining::Determining, stat::Stat}, system::processing_system::ScheduleConfigsProcessing, utils::stat_for_hlist::{MapToChange, MapToStat}};
 
@@ -56,20 +56,38 @@ pub fn stat_apply_change_system<TStat,TChange,Filter>(mut query:Query<(&mut Stat
     });
 }
 
-pub struct StatChangeToApplyChanges;
-
-impl<TStat,TChange,Filter> Func<PhantomData<((TStat,TChange),Filter)>> for StatChangeToApplyChanges
-where 
-	TStat:AddAssign<TChange> + Send + Sync+'static,
-	TChange:Zero + Send + Sync+'static,
-	Filter:QueryFilter+'static
-{
-	type Output = ScheduleConfigs<ScheduleSystem>;
-	
-	fn call(_: PhantomData<((TStat,TChange),Filter)>) -> Self::Output {
-		stat_apply_change_system::<TStat,TChange,Filter>.into_configs()
+new_struct_func!{
+	pub StatChangeToApplyChanges
+	impl<TStat,TChange,Filter> 
+	{where
+		TStat:AddAssign<TChange> + Send + Sync+'static,
+		TChange:Zero + Send + Sync+'static,
+		Filter:QueryFilter+'static}:
+	(PhantomData<((TStat,TChange),Filter)>)->(ScheduleConfigs<ScheduleSystem>)
+	|_|{
+		set_stat_apply_change_config::<TStat,TChange>(
+			stat_apply_change_system::<TStat,TChange,Filter>.into_configs()
+		)
 	}
 }
+
+// pub struct StatChangeToApplyChanges;
+
+// impl<TStat,TChange,Filter> Func<PhantomData<((TStat,TChange),Filter)>> for StatChangeToApplyChanges
+// where 
+// 	TStat:AddAssign<TChange> + Send + Sync+'static,
+// 	TChange:Zero + Send + Sync+'static,
+// 	Filter:QueryFilter+'static
+// {
+// 	type Output = ScheduleConfigs<ScheduleSystem>;
+	
+// 	fn call(_: PhantomData<((TStat,TChange),Filter)>) -> Self::Output {
+// 		set_stat_apply_change_config::<TStat,TChange>(
+// 			stat_apply_change_system::<TStat,TChange,Filter>.into_configs()
+// 		)
+		
+// 	}
+// }
 
 
 pub fn stat_apply_change_system_spawn<TStats,TChanges,Filters>()

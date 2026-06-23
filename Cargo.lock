@@ -4086,6 +4086,7 @@ dependencies = [
  "simba",
  "typenum",
  "wacky_bag",
+ "wacky_bag_hlist",
 ]
 
 [[package]]
@@ -4815,12 +4816,12 @@ dependencies = [
  "frunk",
  "lazy_static",
  "nalgebra",
- "name_type_for_fn",
  "num-traits",
  "physics_basic",
  "rand 0.8.5",
  "simba",
  "wacky_bag",
+ "wacky_bag_hlist",
 ]
 
 [[package]]
@@ -5246,6 +5247,14 @@ dependencies = [
  "rand 0.9.2",
  "statistic_physics",
  "wacky_bag",
+ "wacky_bag_hlist",
+]
+
+[[package]]
+name = "wacky_bag_hlist"
+version = "0.1.0"
+dependencies = [
+ "frunk",
 ]
 
 [[package]]

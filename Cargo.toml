@@ -10,6 +10,7 @@ frunk = "0.4.4"
 rand = "0.9.2"
 
 wacky_bag = {path="../wacky_bag"}
+wacky_bag_hlist = {path="../wacky_bag_hlist"}
 # wacky_bag_fixed = {path="../wacky_bag_fixed"}
 physics_basic = {path="../physics_basic"}
 statistic_physics = {path="../statistic_physics"}
