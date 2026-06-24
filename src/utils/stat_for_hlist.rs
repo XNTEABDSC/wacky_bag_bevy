@@ -5,17 +5,23 @@ use frunk::Func;
 use num_traits::Zero;
 use wacky_bag::{utils::{default_of::default, }};
 // use wacky_bag::utils::output_func::BijectiveFunc;
-use wacky_bag_hlist::{new_struct_func, type_fn::{ReverseFunc, TypeFunc}};
+use wacky_bag_hlist::{new_new_type_func, new_struct_func, type_fn::{ReverseFunc, TypeFunc}};
 use crate::stat_component::{change::{Change, transfer_changes}, determining::Determining, stat_apply_change::{change_apply_change, stat_apply_change}, stat::Stat};
 
-
-new_struct_func!{
+new_new_type_func!{
+	Stat
 	pub MapToStat
-	impl<T>:
-	(T) <-> (Stat<T>)
-	|i|Stat(i),
-	|o|o.0
+	ref pub MapFromStatRef
+	mut pub MapFromStatMut
 }
+
+// new_struct_func!{
+// 	pub MapToStat
+// 	impl<T>:
+// 	(T) <-> (Stat<T>)
+// 	|i|Stat(i),
+// 	|o|o.0
+// }
 
 new_struct_func!{
 	pub MapToChange
@@ -39,19 +45,19 @@ new_struct_func! {
 
 pub type MapFromStat=ReverseFunc<MapToStat>;
 
-new_struct_func!{
-	pub MapFromStatRef
-	impl<'a,T> {where T:'a}:
-	(&'a Stat<T>) <-> (&'a T)
-	|i|&i.0
-}
+// new_struct_func!{
+// 	pub MapFromStatRef
+// 	impl<'a,T> {where T:'a}:
+// 	(&'a Stat<T>) <-> (&'a T)
+// 	|i|&i.0
+// }
 
-new_struct_func!{
-	pub MapFromStatMut
-	impl<'a,T> {where T:'a}:
-	(&'a mut Stat<T>) <-> (&'a mut T)
-	|i|&mut i.0
-}
+// new_struct_func!{
+// 	pub MapFromStatMut
+// 	impl<'a,T> {where T:'a}:
+// 	(&'a mut Stat<T>) <-> (&'a mut T)
+// 	|i|&mut i.0
+// }
 
 #[derive(Clone, Copy,Debug)]
 pub struct SelectChangeRef<'a>(pub PhantomData<&'a ()>);
@@ -84,6 +90,13 @@ new_struct_func!{
 	impl<'a,T> {where T:std::ops::AddAssign}:
 	((T,&'a Change<T>)) |i|i.1.add_change(i.0)
 }
+
+new_struct_func!(
+	pub HTakeChagne
+	impl<'a,T>{where T:Zero}:
+	(&'a mut Change<T>) -> (T)
+	|i|i.get_and_reset()
+);
 
 new_struct_func!{
 	pub HApplyChange
