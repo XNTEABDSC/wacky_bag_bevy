@@ -1,10 +1,11 @@
 use std::{mem::replace, ops::DerefMut, sync::Mutex};
 
-use bevy::{ecs::{component::{Component, Mutable}, query::QueryFilter, system::Query}, reflect::Reflect};
+use bevy::{ecs::{component::{Component, Mutable}, query::QueryFilter, schedule::{IntoScheduleConfigs, ScheduleConfigs}, system::{Query, ScheduleSystem}}, reflect::Reflect};
+use frunk::{HList, HNil};
 use num_traits::Zero;
 use wacky_bag::utils::default_of::default;
 
-use crate::stat_component::stat::Stat;
+use crate::{stat_component::stat::Stat, system::processing_system::ScheduleConfigsProcessing};
 
 #[derive(Component,Debug,Reflect)]
 pub struct CacheSet<T>(pub Mutex<Option<T>>);
@@ -25,9 +26,22 @@ pub fn set_cache_set<T>(a:&mut T,b:&mut CacheSet<T>){
 pub fn set_cache_set_system<T,Filter>(mut q:Query<(&mut T,&mut CacheSet<T>),Filter>)
 where 
 	T:Send+Sync+'static+Component<Mutability = Mutable>,
-	Filter:QueryFilter,
+	Filter:QueryFilter+'static,
 {
 	q.par_iter_mut().for_each(|(mut a,mut b)|{
 		set_cache_set(a.deref_mut(), b.deref_mut());
 	});
+}
+
+pub fn set_cache_set_system_cfg<T,Filter>()->ScheduleConfigs<ScheduleSystem>
+where 
+	T:Send+Sync+'static+Component<Mutability = Mutable>,
+	Filter:QueryFilter+'static,
+{
+	set_cache_set_system::<T,Filter>.into_configs()
+	.config_processing::<
+		HList!(CacheSet<T>),
+		HNil,
+		HList!(T)
+	>()
 }
