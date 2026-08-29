@@ -1,11 +1,11 @@
-use std::{marker::PhantomData, ops::{AddAssign, DerefMut, Neg}};
+use std::{marker::PhantomData, ops::{AddAssign, Deref, DerefMut, Neg}};
 
 use bevy::ecs::query::With;
 use frunk::Func;
 use num_traits::Zero;
 use wacky_bag::{utils::{default_of::default, }};
 // use wacky_bag::utils::output_func::BijectiveFunc;
-use wacky_bag_hlist::{new_new_type_func, new_struct_func, type_fn::{ReverseFunc, TypeFunc}};
+use wacky_bag_hlist::{new_new_type_func, new_struct_func, type_fn::TypeFunc, reverse_func::ReverseFunc};
 use crate::stat_component::{change::{Change, transfer_changes}, determining::Determining, stat_apply_change::{change_apply_change, stat_apply_change}, stat::Stat};
 
 new_new_type_func!{
@@ -38,7 +38,7 @@ new_struct_func! {
 }
 
 new_struct_func! {
-	pub MapToWith
+	pub MapToQFWith
 	impl<T>:
 	(T) <-> (With<T>)
 }
@@ -72,17 +72,24 @@ impl<'a,T> TypeFunc<T> for SelectChangeRef<'a>
 	type Output = &'a Change<T>;
 }
 
-#[derive(Clone, Copy,Debug)]
-pub struct Select2ChangeRef<'a>(pub PhantomData<&'a ()>);
-impl<'a> Default for Select2ChangeRef<'a>{
-	fn default() -> Self {
-		Self(Default::default())
-	}
-}
-impl<'a,T> TypeFunc<T> for Select2ChangeRef<'a> 
-	where T:'a
-{
-	type Output = (&'a Change<T>,&'a Change<T>);
+// #[derive(Clone, Copy,Debug)]
+// pub struct Select2ChangeRef<'a>(pub PhantomData<&'a ()>);
+// impl<'a> Default for Select2ChangeRef<'a>{
+// 	fn default() -> Self {
+// 		Self(Default::default())
+// 	}
+// }
+// impl<'a,T> TypeFunc<T> for Select2ChangeRef<'a> 
+// 	where T:'a
+// {
+// 	type Output = (&'a Change<T>,&'a Change<T>);
+// }
+
+new_struct_func!{
+	pub Select2ChangeRef<'a>
+	impl<T> {where T:'a}
+	:
+	(T)->( (&'a Change<T>,&'a Change<T>) )
 }
 
 new_struct_func!{
@@ -90,13 +97,37 @@ new_struct_func!{
 	impl<'a,T> {where T:std::ops::AddAssign}:
 	((T,&'a Change<T>)) |i|i.1.add_change(i.0)
 }
+/*
+new_struct_func!{
+	pub HAddChange
+	impl<T,TR> {where T:std::ops::AddAssign,TR:Deref<Target = Change<T>>}:
+	((T,TR)) |i|i.1.add_change(i.0)
+}
+*/
 
 new_struct_func!(
 	pub HTakeChagne
 	impl<'a,T>{where T:Zero}:
 	(&'a mut Change<T>) -> (T)
-	|i|i.get_and_reset()
+	|mut i|i.deref_mut().get_and_reset()
 );
+
+new_struct_func!(
+	#[doc="to prevent some weird `for<'a>` problem"]
+	pub HTakeChagneG
+	impl<'a,T,TM>{where T:Zero,TM:Deref<Target = Change<T>>+DerefMut}:
+	(TM) -> (T)
+	|mut i|i.deref_mut().get_and_reset()
+);
+
+/*
+new_struct_func!(
+	pub HTakeChagne
+	impl<T,TR>{where T:Zero,TR:Deref<Target = Change<T>>+DerefMut}:
+	(TR) -> (T)
+	|mut i|i.deref_mut().get_and_reset()
+);
+*/
 
 new_struct_func!{
 	pub HApplyChange
@@ -104,6 +135,20 @@ new_struct_func!{
 	((&'a mut Change<T>,&'a mut Stat<T>))
 	|i|{stat_apply_change(i.0,i.1);}
 }
+
+/*
+new_struct_func!{
+	pub HApplyChange
+	impl<T,TMC,TMS> 
+	{where 
+		T:std::ops::AddAssign+Zero,
+		TMC:Deref<Target = Change<T>>+DerefMut,
+		TMC:Deref<Target = Stat<T>>+DerefMut,
+	}:
+	((&'a mut Change<T>,&'a mut Stat<T>))
+	|i|{stat_apply_change(i.0,i.1);}
+}
+*/
 
 new_struct_func!{
 	pub HChangeGetAndReset
@@ -117,6 +162,20 @@ new_struct_func!{
 	impl<'a,T> {where T:std::ops::AddAssign+Zero}:
 	((T,&'a Change<T>))|i|{i.1.add_change(i.0);}
 }
+
+new_struct_func!{
+	pub HChangeAddG
+	impl<T,TR> {where T:std::ops::AddAssign+Zero,TR:Deref<Target = Change<T>>}:
+	((T,TR))|i|{i.1.add_change(i.0);}
+}
+
+/*
+new_struct_func!{
+	pub HChangeAdd
+	impl<T,TR> {where T:std::ops::AddAssign+Zero,TR:Deref<Target = Change<T>>}:
+	((T,TR))|i|{i.1.add_change(i.0);}
+}
+*/
 
 new_struct_func!{
 	pub HStatSet

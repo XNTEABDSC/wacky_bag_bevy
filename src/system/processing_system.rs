@@ -86,6 +86,14 @@ pub trait ScheduleConfigsProcessing<T>
 	/// All type params are [frunk::hlist].
 	/// 
 	/// `InputComponents` `ProcessingComponents` `OutputComponents` can actually be any type marker, which is suggested to be [Component][bevy::prelude::Component] or [Resource][bevy::prelude::Resource] 
+	///
+	/// Currently there are two kinds of process
+	/// 
+	/// 1: T must be created before set, then may be modified at set, and stabled after set
+	/// 
+	/// 2: T may be created and modified before set, then must be created at set, and stabled after set
+	/// 
+	/// This is not sure to be enough geenric but will be used until new pattern are found.
 	fn config_processing<InputComponents,ProcessingComponents,OutputComponents>(self)->ScheduleConfigs<T>
 	where 
 		InputComponents:HMappable< Poly<MapToProcessingSystemSet> ,
