@@ -1,7 +1,8 @@
 use bevy::ecs::{query::{QueryData, QueryFilter, QueryItem, ROQueryItem}, system::{Query, SystemParam, SystemParamItem}};
 
 
-/// Some helper method works with a query, this helps you to add
+/// Some helper method works with a query, this helps you to merge
+/// 
 /// This is only used for type so `'static` is used
 pub struct SystemParamWithQueryT<D,F,P>
 where D:QueryData+'static,

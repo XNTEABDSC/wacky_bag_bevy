@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bevy::{app::App, ecs::{change_detection::Tick, resource::Resource, schedule::{IntoScheduleConfigs, ScheduleConfigs, ScheduleLabel}, system::{ResMut, ScheduleSystem, SystemChangeTick}}};
+use bevy::{app::App, ecs::{resource::Resource, schedule::{IntoScheduleConfigs, ScheduleConfigs, ScheduleLabel}, system::{ResMut, ScheduleSystem, SystemChangeTick}}};
 use frunk::{HList, HNil, Poly, hlist::{HFoldLeftable, HMappable}};
 use wacky_bag_hlist::impl_phantom;
 

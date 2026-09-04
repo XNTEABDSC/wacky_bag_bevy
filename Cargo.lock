@@ -3495,24 +3495,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "name_type_for_fn"
-version = "0.1.0"
-dependencies = [
- "name_type_for_fn_proc_macro",
- "single_fn_static",
-]
-
-[[package]]
-name = "name_type_for_fn_proc_macro"
-version = "0.1.0"
-dependencies = [
- "proc-macro2",
- "quote",
- "single_fn_static",
- "syn",
-]
-
-[[package]]
 name = "ndk"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4086,7 +4068,6 @@ dependencies = [
  "fixed",
  "frunk",
  "nalgebra",
- "name_type_for_fn",
  "num-traits",
  "rand 0.8.5",
  "simba",
@@ -4693,10 +4674,6 @@ name = "simd-adler32"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e320a6c5ad31d271ad523dcf3ad13e2767ad8b1cb8f047f75a8aeaf8da139da2"
-
-[[package]]
-name = "single_fn_static"
-version = "0.1.0"
 
 [[package]]
 name = "skrifa"

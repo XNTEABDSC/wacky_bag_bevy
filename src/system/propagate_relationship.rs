@@ -1,31 +1,35 @@
 use std::{mem::swap, ops::{AddAssign, ControlFlow::{Break, Continue}, DerefMut}};
 
-use bevy::{ecs::{entity::{Entity, EntityHash}, name::Name, query::{QueryData, QueryItem, ROQueryItem, With, Without}, relationship::{Relationship, RelationshipSourceCollection, RelationshipTarget}, system::{Local, ParamSet, Query, SystemParam, SystemParamItem}}, log::{debug, error}, tasks::{ComputeTaskPool, TaskPool}, utils::Parallel};
+use bevy::{ecs::{entity::{Entity, EntityHash}, query::{QueryItem, ROQueryItem, Without}, relationship::{Relationship, RelationshipSourceCollection, RelationshipTarget}, system::{Local, ParamSet, SystemParam, SystemParamItem}}, log::error, tasks::{ComputeTaskPool, TaskPool}, utils::Parallel};
 use dashmap::DashMap;
 use num_traits::Zero;
-use crate::{stat_component::change::Change, utils::system_param_with_query::{SystemParamWithQuery, SystemParamWithQueryMerge, SystemParamWithQueryParam, SystemParamWithQueryQuery, SystemParamWithQueryROItem, SystemParamWithQueryT}};
+use crate::{stat_component::change::Change, utils::system_param_with_query::{SystemParamWithQuery, SystemParamWithQueryMerge, SystemParamWithQueryParam, SystemParamWithQueryQuery, SystemParamWithQueryT}};
 type SPQMerge<A,B>=<A as SystemParamWithQueryMerge<B>>::Merge;
 
+/// Methods for [`propagate_leaf_to_root`]
 pub trait PropagateLeafToRoot<R>
 where R:Relationship
 {
+	/// [`SystemParam`] for [`from_data`]
 	type FromSysParam:SystemParamWithQuery
 	// where PropagateLeafToRootFromSysParam<R>:SystemParamWithQueryMerge<Self::FromSysParam>;
 	;
+	/// Create data from child
 	fn from_data(
 		values: 
 			ROQueryItem<
 				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
 			>,
-		others: 
+		others:
 			&SystemParamItem<
 				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
 			>
 	)->Self;
-
+	/// [`SystemParam`] for [`apply_to_data`]
 	type ApplySysParam:SystemParamWithQuery
 	// where PropagateLeafToRootApplySysParam<R>:SystemParamWithQueryMerge<Self::ApplySysParam>;
 	;
+	/// Apply data to parent
 	fn apply_to_data(
 		self,
 		values:
@@ -95,6 +99,7 @@ pub type PropagateLeafToRootFromSysParamBegin<R>=SystemParamWithQueryT<
 	()>;
 
 type UpdateSourcesSet=DashMap<Entity,usize,EntityHash>;
+/// Propagate data from leaf to root through [`Relationship`] with method [`PropagateLeafToRoot`]
 pub fn propagate_leaf_to_root<T,R>(
 	mut ps:ParamSet<(
 		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootFromSysParam<R>, T::FromSysParam>>,
@@ -112,8 +117,8 @@ pub fn propagate_leaf_to_root<T,R>(
 {
 	
 	let (task_,task_from_)=update_tasks.deref_mut();
-	let mut task=task_;
-	let mut task_from=task_from_;
+	let task=task_;
+	let task_from=task_from_;
 
 	let task_pool = ComputeTaskPool::get_or_init(TaskPool::default);
 	{
@@ -251,12 +256,15 @@ pub fn propagate_leaf_to_root<T,R>(
 
 	update_sources_set.clear();
 }
+/// Methods for [`propagate_leaf_to_root_mut`]
 pub trait PropagateLeafToRootMut<R>
 where R:Relationship
 {
+	/// [`SystemParam`] for [`from_data`]
 	type FromSysParam:SystemParamWithQuery
 	// where PropagateLeafToRootFromSysParam<R>:SystemParamWithQueryMerge<Self::FromSysParam>;
 	;
+	/// Create data from child
 	fn from_data(
 		values: 
 			QueryItem<
@@ -271,6 +279,7 @@ where R:Relationship
 	type ApplySysParam:SystemParamWithQuery
 	// where PropagateLeafToRootApplySysParam<R>:SystemParamWithQueryMerge<Self::ApplySysParam>;
 	;
+	/// Apply data to parent
 	fn apply_to_data(
 		self,
 		values:
@@ -338,6 +347,12 @@ pub type PropagateLeafToRootMutFromSysParamBegin<R>=SystemParamWithQueryT<
 	&'static R,
 	Without<<R as Relationship>::RelationshipTarget>,
 	()>;
+	
+/// Propagate data from leaf to root through [`Relationship`] with method [`PropagateLeafToRoot`]
+/// 
+/// # Safety
+/// 
+/// [`Relationship`] ensures tree shape, that one [`Relationship`] will not have multiple [`RelationshipTarget`], otherwise Rust's aliasing guarantees can be violated by this function. 
 pub fn propagate_leaf_to_root_mut<T,R>(
 	mut ps:ParamSet<(
 		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, T::FromSysParam>>,
@@ -355,8 +370,8 @@ pub fn propagate_leaf_to_root_mut<T,R>(
 {
 	
 	let (task_,task_from_)=update_tasks.deref_mut();
-	let mut task=task_;
-	let mut task_from_p=task_from_;
+	let task=task_;
+	let task_from_p=task_from_;
 
 	let task_pool = ComputeTaskPool::get_or_init(TaskPool::default);
 	{
@@ -369,9 +384,6 @@ pub fn propagate_leaf_to_root_mut<T,R>(
 			}
 		);
 	}
-
-	
-	
 
 	while task.iter_mut().try_fold((), |_,b| if b.is_empty() {Continue(())} else {Break(())} ).is_break()
 	{
@@ -463,23 +475,69 @@ pub fn propagate_leaf_to_root_mut<T,R>(
 	update_sources_set.clear();
 }
 
-pub trait PropagateRootToLeaf:Clone
+pub trait PropagateRootToLeaf<R>
+where R:Relationship
 {
-	type DataBegin:QueryData;
-	type Data:QueryData;
-	fn from_data<'w,'s>(values:&ROQueryItem<'w,'s,Self::DataBegin>)->Self;
-	fn process_data<'w,'s>(&mut self,values:&ROQueryItem<'w,'s,Self::Data>);
+	/// [`SystemParam`] for [`from_data`]
+	type BeginSysParam:SystemParamWithQuery
+	// where PropagateLeafToRootFromSysParam<R>:SystemParamWithQueryMerge<Self::FromSysParam>;
+	;
+	/// Create data from child
+	fn process_data_begin(
+		values: 
+			ROQueryItem<
+				<SPQMerge<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
+			>,
+		others: 
+			&SystemParamItem<
+				<SPQMerge<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
+			>
+	)->
+	// Vec<(Entity,Self)>
+	impl FnMut(Entity)->Self
+	;
+
+	type ProcessSysParam:SystemParamWithQuery;
+	fn process_data<'w,'s>(
+		self,
+		values: 
+			ROQueryItem<
+				<SPQMerge<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
+			>,
+		others: 
+			&SystemParamItem<
+				<SPQMerge<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
+			>)
+	->
+	// Vec<(Entity,Self)>
+	impl FnMut(Entity)->Self
+	;
 }
+
+pub type PropagateRootToLeafBeginSysParam<R>=SystemParamWithQueryT<
+	&'static <R as Relationship>::RelationshipTarget,
+	Without<R>,
+	()>;
+pub type PropagateRootToLeafProcessSysParam<R>=SystemParamWithQueryT< 
+	(&'static R,Option<&'static <R as Relationship>::RelationshipTarget>) , 
+	(),
+	()>;
+// pub type PropagateRootToLeafFromSysParamBegin<R>=SystemParamWithQueryT<
+// 	&'static <R as Relationship>::RelationshipTarget,
+// 	Without<R>,
+// 	()>;
 
 pub fn propagate_root_to_leaf<T,R>(
 	mut ps:ParamSet<(
-		Query<(T::DataBegin,&R::RelationshipTarget),(Without<R>,)>,
-		Query<(T::Data,&R,Option<&R::RelationshipTarget>)>,
+		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafBeginSysParam<R>, T::BeginSysParam>>,
+		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafProcessSysParam<R>, T::ProcessSysParam>>,
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
-where T:PropagateRootToLeaf+Send+Sync+Clone,
+where T:PropagateRootToLeaf<R>+Send+Sync+Clone,
 	R:Relationship,
+	for <'w,'s> <<<T as PropagateRootToLeaf<R>>::BeginSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send,
+	for <'w,'s> <<<T as PropagateRootToLeaf<R>>::ProcessSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send
 {
 	let (task_,task_cache_)=update_tasks.deref_mut();
 	let mut task=task_;
@@ -487,49 +545,133 @@ where T:PropagateRootToLeaf+Send+Sync+Clone,
 
 	let task_pool = ComputeTaskPool::get_or_init(TaskPool::default);
 
-	ps.p0().par_iter().for_each_init(||task.borrow_local_mut(),|l,q|{
-		let t=T::from_data(&q.0);
-		q.1.iter().for_each(|e|{
-			l.push((e,t.clone()));
-		});
-	});
+	// ps.p0().par_iter().for_each_init(||task.borrow_local_mut(),|l,q|{
+	// 	let t=T::process_data_begin(&q.0);
+	// 	q.1.iter().for_each(|e|{
+	// 		l.push((e,t.clone()));
+	// 	});
+	// });
 
-	let nodes_q=ps.p1();
-	while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
-		
-		task_pool.scope(|scope|{
-			task.iter_mut().for_each(|task_list|{
-				scope.spawn(async{
-					let mut task_cache=task_cache.borrow_local_mut();
-					for (e,mut t) in task_list.drain(..) {
-						let a=match nodes_q.get(e) {
+	{
+		let (q,o)=ps.p0();
+		q.par_iter().for_each_init(||task.borrow_local_mut(),|l,q|{
+			let es=q.0.collection();
+			let mut t=T::process_data_begin(q,&o);
+			es.iter().for_each(|e|{
+				l.push((e,t(e)));
+			});
+		});
+	}
+
+	{
+		let (q,o)=ps.p1();
+		while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
+			task_pool.scope(|scope|{
+				task.iter_mut().for_each(|task_list|{
+					scope.spawn(async{
+						let mut task_cache=task_cache.borrow_local_mut();
+						for (e,t) in task_list.drain(..) {
+							let a=match q.get(e) {
 								Ok(a) => a,
 								Err(e) => {error!("{e}");continue;},
 							};
-						t.process_data(&a.0);
-						if let Some(rt)=a.2 {
-							for i in rt.collection().iter() {
-								task_cache.push((i,t.clone()));
+							if let Some(rt)=a.0.1 {
+								let es=rt.collection();
+			
+								let mut f=t.process_data(a,&o);
+								es.iter().for_each(|e|{
+									task_cache.push((e,f(e)));
+								});
+								// for i in rt.collection().iter() {
+								// 	task_cache.push((i,t.clone()));
+								// }
+							}else {
+								let _f=t.process_data(a,&o);
 							}
 						}
-					}
+					});
 				});
 			});
-		});
 
-		swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+			swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+		}
 	}
+
+	// let nodes_q=ps.p1();
+	// while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
+		
+	// 	task_pool.scope(|scope|{
+	// 		task.iter_mut().for_each(|task_list|{
+	// 			scope.spawn(async{
+	// 				let mut task_cache=task_cache.borrow_local_mut();
+	// 				for (e,mut t) in task_list.drain(..) {
+	// 					let a=match nodes_q.get(e) {
+	// 							Ok(a) => a,
+	// 							Err(e) => {error!("{e}");continue;},
+	// 						};
+	// 					t.process_data(&a.0);
+	// 					if let Some(rt)=a.2 {
+	// 						for i in rt.collection().iter() {
+	// 							task_cache.push((i,t.clone()));
+	// 						}
+	// 					}
+	// 				}
+	// 			});
+	// 		});
+	// 	});
+
+	// 	swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+	// }
 }
 
 
-pub trait PropagateRootToLeafMut:Clone
+pub trait PropagateRootToLeafMut<R>:Clone
+where R:Relationship
 {
-	type DataBegin:QueryData;
-	type Data:QueryData;
-	fn from_data<'w,'s>(values:&QueryItem<'w,'s,Self::DataBegin>)->Self;
-	fn process_data<'w,'s>(&mut self,values:&QueryItem<'w,'s,Self::Data>);
+	/// [`SystemParam`] for [`from_data`]
+	type BeginSysParam:SystemParamWithQuery
+	// where PropagateLeafToRootFromSysParam<R>:SystemParamWithQueryMerge<Self::FromSysParam>;
+	;
+	/// Create data from child
+	fn process_data_begin(
+		values: 
+			QueryItem<
+				<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
+			>,
+		others: 
+			&SystemParamItem<
+				<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
+			>
+	)->
+	// Vec<(Entity,Self)>
+	impl FnMut(Entity)->Self
+	;
+
+	type ProcessSysParam:SystemParamWithQuery;
+	fn process_data<'w,'s>(
+		self,
+		values: 
+			QueryItem<
+				<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
+			>,
+		others: 
+			&SystemParamItem<
+				<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
+			>)
+	->
+	// Vec<(Entity,Self)>
+	impl FnMut(Entity)->Self
+	;
 }
 
+pub type PropagateRootToLeafMutBeginSysParam<R>=SystemParamWithQueryT<
+	&'static <R as Relationship>::RelationshipTarget,
+	Without<R>,
+	()>;
+pub type PropagateRootToLeafMutProcessSysParam<R>=SystemParamWithQueryT< 
+	(&'static R,Option<&'static <R as Relationship>::RelationshipTarget>) , 
+	(),
+	()>;
 /// Propagate data via [`Relationship`] and method [`PropagateRootToLeafMut`]
 /// 
 /// # Safety
@@ -537,13 +679,15 @@ pub trait PropagateRootToLeafMut:Clone
 /// [`Relationship`] ensures tree shape, that one [`Relationship`] will not have multiple [`RelationshipTarget`], otherwise Rust's aliasing guarantees can be violated by this function. 
 pub fn propagate_root_to_leaf_mut<T,R>(
 	mut ps:ParamSet<(
-		Query<(T::DataBegin,&R::RelationshipTarget),(Without<R>,)>,
-		Query<(T::Data,&R,Option<&R::RelationshipTarget>)>,
+		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, T::BeginSysParam>>,
+		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, T::ProcessSysParam>>,
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
-where T:PropagateRootToLeafMut+Send+Sync+Clone,
+where T:PropagateRootToLeafMut<R>+Send+Sync+Clone,
 	R:Relationship,
+	for <'w,'s> <<<T as PropagateRootToLeafMut<R>>::BeginSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send,
+	for <'w,'s> <<<T as PropagateRootToLeafMut<R>>::ProcessSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send
 {
 	let (task_,task_cache_)=update_tasks.deref_mut();
 	let mut task=task_;
@@ -551,43 +695,107 @@ where T:PropagateRootToLeafMut+Send+Sync+Clone,
 
 	let task_pool = ComputeTaskPool::get_or_init(TaskPool::default);
 
-	ps.p0().par_iter_mut().for_each_init(||task.borrow_local_mut(),|l,q|{
-		let t=T::from_data(&q.0);
-		q.1.iter().for_each(|e|{
-			l.push((e,t.clone()));
+	{
+		let (mut q,o)=ps.p0();
+		q.par_iter_mut().for_each_init(||task.borrow_local_mut(),|l,q|{
+			let es=q.0.collection();
+			let mut t=T::process_data_begin(q,&o);
+			es.iter().for_each(|e|{
+				l.push((e,t(e)));
+			});
 		});
-	});
+	}
 
-	let nodes_q=ps.p1();
-	while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
-		
-		task_pool.scope(|scope|{
-			task.iter_mut().for_each(|task_list|{
-				scope.spawn(async{
-					let mut task_cache=task_cache.borrow_local_mut();
-					for (e,mut t) in task_list.drain(..) {
-						let mut nodes_q_b=unsafe {nodes_q.reborrow_unsafe()};
-						let a=match nodes_q_b.get_mut(e) {
+	{
+		let (q,o)=ps.p1();
+		while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
+			task_pool.scope(|scope|{
+				task.iter_mut().for_each(|task_list|{
+					scope.spawn(async{
+						let mut task_cache=task_cache.borrow_local_mut();
+						for (e,t) in task_list.drain(..) {
+							// Safety: assume all e are different
+							let mut q_b=unsafe {q.reborrow_unsafe()};
+							let a=match q_b.get_mut(e) {
 								Ok(a) => a,
 								Err(e) => {error!("{e}");continue;},
 							};
-						t.process_data(&a.0);
-						if let Some(rt)=a.2 {
-							for i in rt.collection().iter() {
-								task_cache.push((i,t.clone()));
+							if let Some(rt)=a.0.1 {
+								let es=rt.collection();
+			
+								let mut f=t.process_data(a,&o);
+								es.iter().for_each(|e|{
+									task_cache.push((e,f(e)));
+								});
+								// for i in rt.collection().iter() {
+								// 	task_cache.push((i,t.clone()));
+								// }
+							}else {
+								let _f=t.process_data(a,&o);
 							}
 						}
-					}
+					});
 				});
 			});
-		});
 
-		swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+			swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+		}
 	}
 }
+// (
+// 	mut ps:ParamSet<(
+// 		Query<(T::DataBegin,&R::RelationshipTarget),(Without<R>,)>,
+// 		Query<(T::Data,&R,Option<&R::RelationshipTarget>)>,
+// 	)>,
+// 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
+// )
+// where T:PropagateRootToLeafMut+Send+Sync+Clone,
+// 	R:Relationship,
+// {
+// 	let (task_,task_cache_)=update_tasks.deref_mut();
+// 	let mut task=task_;
+// 	let mut task_cache=task_cache_;
+
+// 	let task_pool = ComputeTaskPool::get_or_init(TaskPool::default);
+
+// 	ps.p0().par_iter_mut().for_each_init(||task.borrow_local_mut(),|l,q|{
+// 		let t=T::from_data(&q.0);
+// 		q.1.iter().for_each(|e|{
+// 			l.push((e,t.clone()));
+// 		});
+// 	});
+
+// 	let nodes_q=ps.p1();
+// 	while task.iter_mut().try_fold((), |_,b|if b.is_empty() {Continue(())} else {Break(())}).is_break() {
+		
+// 		task_pool.scope(|scope|{
+// 			task.iter_mut().for_each(|task_list|{
+// 				scope.spawn(async{
+// 					let mut task_cache=task_cache.borrow_local_mut();
+// 					for (e,mut t) in task_list.drain(..) {
+// 						let mut nodes_q_b=unsafe {nodes_q.reborrow_unsafe()};
+// 						let a=match nodes_q_b.get_mut(e) {
+// 								Ok(a) => a,
+// 								Err(e) => {error!("{e}");continue;},
+// 							};
+// 						t.process_data(&a.0);
+// 						if let Some(rt)=a.2 {
+// 							for i in rt.collection().iter() {
+// 								task_cache.push((i,t.clone()));
+// 							}
+// 						}
+// 					}
+// 				});
+// 			});
+// 		});
+
+// 		swap::<&mut Parallel<_>>(&mut task, &mut task_cache);
+// 	}
+// }
 
 
 #[cfg(test)]
+#[allow(unused)]
 mod test{
 	use crate::stat_component::stat::Stat;
 
