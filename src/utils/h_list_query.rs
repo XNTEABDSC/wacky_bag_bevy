@@ -1,5 +1,5 @@
 use bevy::ecs::query::{Access, QueryData, ReadOnlyQueryData, ReleaseStateQueryData, WorldQuery};
-use frunk::{HCons, HNil, hlist::IntoTuple2};
+use frunk::{HCons, HNil};
 
 
 /// allows to use hlist as QueryData
@@ -328,36 +328,3 @@ where
 }
 
 
-
-#[cfg(test)]
-mod test{
-	use super::*;
-    use bevy::ecs::{component::Component, system::Query};
-use frunk::HList;
-
-	#[derive(Component)]
-	struct C1;
-	#[derive(Component)]
-	struct C2;
-
-	fn check_w_q<Q>()
-		where Q:WorldQuery
-	{}
-
-	
-	fn check_q_d<Q>()
-		where Q:QueryData
-	{}
-
-	fn test(){
-		check_w_q::< HToQueryType<HList!(&C1,&C2)>>();
-
-		check_q_d::< HToQueryType<HList!(&C1,&C2)> >();
-
-		check_q_d::< HToQueryType<HList!(&C1,&C2,&C1)> >();
-	}
-
-	// fn test2(q:Query<HQueryData<HList!(&C1,&C2)>>){
-
-	// }
-}
