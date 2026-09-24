@@ -70,3 +70,4 @@ where
 {
 	type Merge = SystemParamWithQueryT<(D1,D2),(F1,F2),(P1,P2)>;
 }
+pub type SystemParamWithQueryMergeT<A,B>=<A as SystemParamWithQueryMerge<B>>::Merge;

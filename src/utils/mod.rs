@@ -12,3 +12,4 @@ pub mod plugin_add_systems;
 pub mod h_list_query;
 pub mod fold_plugin_group_add;
 pub mod system_param_with_query;
+pub mod relationship_root;

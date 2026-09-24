@@ -3,8 +3,8 @@ use std::{mem::swap, ops::{AddAssign, ControlFlow::{Break, Continue}, DerefMut}}
 use bevy::{ecs::{entity::{Entity, EntityHash}, query::{QueryItem, ROQueryItem, Without}, relationship::{Relationship, RelationshipSourceCollection, RelationshipTarget}, system::{Local, ParamSet, SystemParam, SystemParamItem}}, log::error, tasks::{ComputeTaskPool, TaskPool}, utils::Parallel};
 use dashmap::DashMap;
 use num_traits::Zero;
-use crate::{stat_component::change::Change, utils::system_param_with_query::{SystemParamWithQuery, SystemParamWithQueryMerge, SystemParamWithQueryParam, SystemParamWithQueryQuery, SystemParamWithQueryT}};
-type SPQMerge<A,B>=<A as SystemParamWithQueryMerge<B>>::Merge;
+use crate::{stat_component::change::Change, utils::system_param_with_query::{SystemParamWithQuery, SystemParamWithQueryMerge, SystemParamWithQueryMergeT, SystemParamWithQueryParam, SystemParamWithQueryQuery, SystemParamWithQueryT}};
+
 
 /// Methods for [`propagate_leaf_to_root`]
 pub trait PropagateLeafToRoot<R>
@@ -18,11 +18,11 @@ where R:Relationship
 	fn from_data(
 		values: 
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
 			>,
 		others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
 			>
 	)->Self;
 	/// [`SystemParam`] for [`apply_to_data`]
@@ -34,12 +34,12 @@ where R:Relationship
 		self,
 		values:
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
 			>,
 		//SystemParamWithQueryROItem<'w,'s,SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam>>,
 		others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
 			>
 	);
 }
@@ -59,11 +59,11 @@ where T:Send+Sync+AddAssign+'static+Zero,
 	fn from_data(
 		values: 
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
 			>,
 		_others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
 			>
 	)->Self {
 		Self(values.1.get_and_reset_ref())
@@ -72,12 +72,12 @@ where T:Send+Sync+AddAssign+'static+Zero,
 	fn apply_to_data(self,
 		values:
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
 			>,
 		//SystemParamWithQueryROItem<'w,'s,SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam>>,
 		_others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
 			>
 	) {
 		let a=values.1;
@@ -102,9 +102,9 @@ type UpdateSourcesSet=DashMap<Entity,usize,EntityHash>;
 /// Propagate data from leaf to root through [`Relationship`] with method [`PropagateLeafToRoot`]
 pub fn propagate_leaf_to_root<T,R>(
 	mut ps:ParamSet<(
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootFromSysParam<R>, T::FromSysParam>>,
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam>> ,
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootFromSysParamBegin<R>, T::FromSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParam<R>, T::FromSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam>> ,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootFromSysParamBegin<R>, T::FromSysParam>>,
 	)>,
 	update_sources_set:
 	Local<UpdateSourcesSet>,
@@ -146,8 +146,8 @@ pub fn propagate_leaf_to_root<T,R>(
 					// tasks_p:&Parallel<Vec<(Entity,T)>>,
 					tasks:&mut Vec<(Entity,T)>,
 					task_from_p:&Parallel<Vec<Entity>>,
-					q: & SystemParamWithQueryQuery<SPQMerge<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam>>,
-					o: & SystemParamItem<<SPQMerge<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam> as SystemParamWithQuery>::P >
+					q: & SystemParamWithQueryQuery<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam>>,
+					o: & SystemParamItem<<SystemParamWithQueryMergeT<PropagateLeafToRootApplySysParam<R>, T::ApplySysParam> as SystemParamWithQuery>::P >
 				)
 				where 
 					T:PropagateLeafToRoot<R>+Send+Sync,
@@ -268,11 +268,11 @@ where R:Relationship
 	fn from_data(
 		values: 
 			QueryItem<
-				<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
 			>,
 		others: 
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
 			>
 	)->Self;
 
@@ -284,12 +284,12 @@ where R:Relationship
 		self,
 		values:
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
 			>,
 		//SystemParamWithQueryROItem<'w,'s,SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam>>,
 		others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
 			>
 	);
 }
@@ -309,11 +309,11 @@ where T:Send+Sync+AddAssign+'static+Zero,
 	fn from_data(
 		mut values: 
 			QueryItem<
-				<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::D
 			>,
 		_others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParam<R>, Self::FromSysParam> as SystemParamWithQuery>::P
 			>
 	)->Self {
 		Self(values.1.get_and_reset())
@@ -322,12 +322,12 @@ where T:Send+Sync+AddAssign+'static+Zero,
 	fn apply_to_data(self,
 		values:
 			ROQueryItem<
-				<SPQMerge<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::D
 			>,
 		//SystemParamWithQueryROItem<'w,'s,SPQMerge<PropagateLeafToRootApplySysParam<R>, Self::ApplySysParam>>,
 		_others:
 			&SystemParamItem<
-				<SPQMerge<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateLeafToRootMutApplySysParam<R>, Self::ApplySysParam> as SystemParamWithQuery>::P
 			>
 	) {
 		let a=values.1;
@@ -355,9 +355,9 @@ pub type PropagateLeafToRootMutFromSysParamBegin<R>=SystemParamWithQueryT<
 /// [`Relationship`] ensures tree shape, that one [`Relationship`] will not have multiple [`RelationshipTarget`], otherwise Rust's aliasing guarantees can be violated by this function. 
 pub fn propagate_leaf_to_root_mut<T,R>(
 	mut ps:ParamSet<(
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootMutFromSysParam<R>, T::FromSysParam>>,
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootMutApplySysParam<R>, T::ApplySysParam>> ,
-		SystemParamWithQueryParam<SPQMerge<PropagateLeafToRootMutFromSysParamBegin<R>, T::FromSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParam<R>, T::FromSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootMutApplySysParam<R>, T::ApplySysParam>> ,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateLeafToRootMutFromSysParamBegin<R>, T::FromSysParam>>,
 	)>,
 	update_sources_set:
 	Local<UpdateSourcesSet>,
@@ -486,11 +486,11 @@ where R:Relationship
 	fn process_data_begin(
 		values: 
 			ROQueryItem<
-				<SPQMerge<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
 			>,
 		others: 
 			&SystemParamItem<
-				<SPQMerge<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateRootToLeafBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
 			>
 	)->
 	// Vec<(Entity,Self)>
@@ -502,11 +502,11 @@ where R:Relationship
 		self,
 		values: 
 			ROQueryItem<
-				<SPQMerge<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
 			>,
 		others: 
 			&SystemParamItem<
-				<SPQMerge<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateRootToLeafProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
 			>)
 	->
 	// Vec<(Entity,Self)>
@@ -529,8 +529,8 @@ pub type PropagateRootToLeafProcessSysParam<R>=SystemParamWithQueryT<
 
 pub fn propagate_root_to_leaf<T,R>(
 	mut ps:ParamSet<(
-		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafBeginSysParam<R>, T::BeginSysParam>>,
-		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafProcessSysParam<R>, T::ProcessSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateRootToLeafBeginSysParam<R>, T::BeginSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateRootToLeafProcessSysParam<R>, T::ProcessSysParam>>,
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
@@ -625,7 +625,7 @@ where T:PropagateRootToLeaf<R>+Send+Sync+Clone,
 }
 
 
-pub trait PropagateRootToLeafMut<R>:Clone
+pub trait PropagateRootToLeafMut<R>
 where R:Relationship
 {
 	/// [`SystemParam`] for [`from_data`]
@@ -636,11 +636,11 @@ where R:Relationship
 	fn process_data_begin(
 		values: 
 			QueryItem<
-				<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
 			>,
 		others: 
 			&SystemParamItem<
-				<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
 			>
 	)->
 	// Vec<(Entity,Self)>
@@ -652,11 +652,11 @@ where R:Relationship
 		self,
 		values: 
 			QueryItem<
-				<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
+				<SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
 			>,
 		others: 
 			&SystemParamItem<
-				<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
+				<SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
 			>)
 	->
 	// Vec<(Entity,Self)>
@@ -679,8 +679,8 @@ pub type PropagateRootToLeafMutProcessSysParam<R>=SystemParamWithQueryT<
 /// [`Relationship`] ensures tree shape, that one [`Relationship`] will not have multiple [`RelationshipTarget`], otherwise Rust's aliasing guarantees can be violated by this function. 
 pub fn propagate_root_to_leaf_mut<T,R>(
 	mut ps:ParamSet<(
-		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafMutBeginSysParam<R>, T::BeginSysParam>>,
-		SystemParamWithQueryParam<SPQMerge<PropagateRootToLeafMutProcessSysParam<R>, T::ProcessSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, T::BeginSysParam>>,
+		SystemParamWithQueryParam<SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, T::ProcessSysParam>>,
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
