@@ -534,7 +534,7 @@ pub fn propagate_root_to_leaf<T,R>(
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
-where T:PropagateRootToLeaf<R>+Send+Sync+Clone,
+where T:PropagateRootToLeaf<R>+Send+Sync,
 	R:Relationship,
 	for <'w,'s> <<<T as PropagateRootToLeaf<R>>::BeginSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send,
 	for <'w,'s> <<<T as PropagateRootToLeaf<R>>::ProcessSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send
@@ -684,7 +684,7 @@ pub fn propagate_root_to_leaf_mut<T,R>(
 	)>,
 	mut update_tasks:Local<(Parallel<Vec<(Entity,T)>>,Parallel<Vec<(Entity,T)>>)>,
 )
-where T:PropagateRootToLeafMut<R>+Send+Sync+Clone,
+where T:PropagateRootToLeafMut<R>+Send+Sync,
 	R:Relationship,
 	for <'w,'s> <<<T as PropagateRootToLeafMut<R>>::BeginSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send,
 	for <'w,'s> <<<T as PropagateRootToLeafMut<R>>::ProcessSysParam as SystemParamWithQuery>::P as SystemParam>::Item<'w, 's>: Sync+Send

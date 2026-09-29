@@ -93,63 +93,63 @@ where R:Relationship+Send+Sync
     }
 }
 
-// impl<R> Component for RelationshipRoot<R>
-// where R:Relationship+Send+Sync
-// {
-//     const STORAGE_TYPE: bevy::ecs::component::StorageType = bevy::ecs::component::StorageType::Table;
+// // impl<R> Component for RelationshipRoot<R>
+// // where R:Relationship+Send+Sync
+// // {
+// //     const STORAGE_TYPE: bevy::ecs::component::StorageType = bevy::ecs::component::StorageType::Table;
 
-//     type Mutability = bevy::ecs::component::Mutable;
+// //     type Mutability = bevy::ecs::component::Mutable;
+// // }
+
+// #[deprecated = "RelationshipRoot handles this by component hook"]
+// #[derive(Debug,Clone, Copy)]
+// pub struct PropagateRelationshipRoot(Entity);
+
+// impl<R:Relationship> PropagateRootToLeafMut<R> for PropagateRelationshipRoot {
+//     type BeginSysParam=SystemParamWithQueryT<
+//         (Entity,),
+//         (Changed<R>,),
+//         ()
+//     >
+//         ;
+
+//     fn process_data_begin(
+//             values: 
+//                 QueryItem<
+//                     <SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
+//                 >,
+//             _others: 
+//                 &SystemParamItem<
+//                     <SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
+//                 >
+//         )->
+//         // Vec<(Entity,Self)>
+//         impl FnMut(Entity)->Self
+//         {
+//         return move |_|PropagateRelationshipRoot(values.1.0);
+//     }
+
+//     type ProcessSysParam=SystemParamWithQueryT<
+//         (&'static mut RelationshipRoot<R>,),
+//         (Changed<R>,),
+//         ()
+//     >;
+
+//     fn process_data<'w,'s>(
+//             self,
+//             mut values: 
+//                 QueryItem<
+//                     <SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
+//                 >,
+//             _others: 
+//                 &SystemParamItem<
+//                     <SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
+//                 >)
+//         ->
+//         // Vec<(Entity,Self)>
+//         impl FnMut(Entity)->Self
+//         {
+//         values.1.0.entity=self.0;
+//         return move|_|self.clone();
+//     }
 // }
-
-#[deprecated = "RelationshipRoot handles this by component hook"]
-#[derive(Debug,Clone, Copy)]
-pub struct PropagateRelationshipRoot(Entity);
-
-impl<R:Relationship> PropagateRootToLeafMut<R> for PropagateRelationshipRoot {
-    type BeginSysParam=SystemParamWithQueryT<
-        (Entity,),
-        (Changed<R>,),
-        ()
-    >
-        ;
-
-    fn process_data_begin(
-            values: 
-                QueryItem<
-                    <SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::D
-                >,
-            _others: 
-                &SystemParamItem<
-                    <SystemParamWithQueryMergeT<PropagateRootToLeafMutBeginSysParam<R>, Self::BeginSysParam> as SystemParamWithQuery>::P
-                >
-        )->
-        // Vec<(Entity,Self)>
-        impl FnMut(Entity)->Self
-        {
-        return move |_|PropagateRelationshipRoot(values.1.0);
-    }
-
-    type ProcessSysParam=SystemParamWithQueryT<
-        (&'static mut RelationshipRoot<R>,),
-        (Changed<R>,),
-        ()
-    >;
-
-    fn process_data<'w,'s>(
-            self,
-            mut values: 
-                QueryItem<
-                    <SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::D
-                >,
-            _others: 
-                &SystemParamItem<
-                    <SystemParamWithQueryMergeT<PropagateRootToLeafMutProcessSysParam<R>, Self::ProcessSysParam> as SystemParamWithQuery>::P
-                >)
-        ->
-        // Vec<(Entity,Self)>
-        impl FnMut(Entity)->Self
-        {
-        values.1.0.entity=self.0;
-        return move|_|self.clone();
-    }
-}
