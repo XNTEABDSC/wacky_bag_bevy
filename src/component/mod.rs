@@ -7,7 +7,7 @@ pub mod vec_component;
 /// Component Newtype
 /// 
 /// its currently [`Stat`], and may change if needed
-pub type C<T>=Stat<T>;
+pub type Comp<T>=Stat<T>;
 
 
-pub type CAM<T>=C<Arc<Mutex<T>>>;
+pub type CAM<T>=Comp<Arc<Mutex<T>>>;

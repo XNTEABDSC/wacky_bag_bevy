@@ -1,6 +1,6 @@
 use std::sync::Mutex;
 
-use bevy::{ecs::{message::MessageWriter, resource::Resource, system::{Res, ResMut, SystemParam}}, tasks::ComputeTaskPool, utils::Parallel};
+use bevy::{ecs::{message::MessageWriter, resource::Resource, system::{Res, ResMut, SystemParam, SystemParamItem}}, tasks::ComputeTaskPool, utils::Parallel};
 
 // use crate::utils::par_simple_map::ParSimpleMap;
 
@@ -8,18 +8,36 @@ use bevy::{ecs::{message::MessageWriter, resource::Resource, system::{Res, ResMu
 /// unlike [`bevy::ecs::message::Message`] OwnedMessage is ensured to be processed by only one system, thus ownership is provided.
 pub trait OwnedMessage:Sized {
 	type SystemParam:SystemParam;
-	fn apply_self<'w,'s>(self,p:&<Self::SystemParam as SystemParam>::Item<'w,'s>);
+	fn apply_self(self,p:& SystemParamItem<Self::SystemParam>);
 }
 
 /// Resource storing all `T:`[`OwnedMessage`]
-#[derive(Default,Resource)]
+#[derive(Resource)]
 pub struct ParOwnedMessages<T:OwnedMessage+Send+Sync+'static>{
-	msgs:Parallel<Vec<T>>
+	pub msgs:Parallel<Vec<T>>
 }
 
-pub fn apply_owned_message_parallel<'w,'s,T>(mut a:ResMut<ParOwnedMessages<T>>,p: <T::SystemParam as SystemParam>::Item<'w,'s>)
+impl<T: OwnedMessage + Send + Sync + 'static> Default for ParOwnedMessages<T> {
+    fn default() -> Self {
+		Self { msgs: Default::default() }
+	}
+}
+
+
+impl<T:OwnedMessage+Send+Sync+'static> ParOwnedMessages<T> {
+	pub fn write(&self,msg:T){
+		self.msgs.borrow_local_mut().push(msg);
+	}
+
+	pub fn write_batch(&self,msgs:impl IntoIterator<Item = T>){
+		self.msgs.borrow_local_mut().extend(msgs);
+	}
+}
+
+pub fn apply_owned_message_parallel<T>(mut a:ResMut<ParOwnedMessages<T>>, p: SystemParamItem<T::SystemParam>)
 where T:OwnedMessage+Send+Sync+'static,
-	<<T as OwnedMessage>::SystemParam as SystemParam>::Item<'w, 's>: Sync
+	for<'w,'s> SystemParamItem<'w,'s,T::SystemParam>: Sync
+	// <<T as OwnedMessage>::SystemParam as SystemParam>::Item<'w, 's>: Sync
 {
 	ComputeTaskPool::get().scope(|s|{
 		a.msgs.iter_mut().for_each(|msgs|{
